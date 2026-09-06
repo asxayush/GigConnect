@@ -13,7 +13,7 @@ const port = process.env.PORT || 5000;
 connectDB()
 .then(() => {
   app.listen(port, () => {
-  console.log(`Example app listening on port http://localhost:${port}`)
+  console.log(`GigConnect listening on port http://localhost:${port}`)
 })
 
 })
