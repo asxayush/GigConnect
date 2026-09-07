@@ -1,26 +1,63 @@
 import { Router } from "express";
+import fs from "node:fs";
+import path from "node:path";
+import multer from "multer";
+import { fileURLToPath } from "node:url";
 import User from "../models/User.js";
 import WorkerProfile from "../models/WorkerProfile.js";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
+const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
+const uploadDirectory = path.resolve(currentDirectory, "../../uploads/certificates");
+fs.mkdirSync(uploadDirectory, { recursive: true });
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: uploadDirectory,
+        filename: (request, file, callback) => callback(null, `${Date.now()}-${file.originalname.replace(/[^a-zA-Z0-9._-]/g, "_")}`),
+    }),
+    limits: { fileSize: 5 * 1024 * 1024 },
+    fileFilter: (request, file, callback) => callback(null, ["application/pdf", "image/jpeg", "image/png"].includes(file.mimetype)),
+});
 
 router.get("/", async (request, response, next) => {
     try {
         const filter = { verificationStatus: "verified", availability: true };
         if (request.query.skill) filter.skills = request.query.skill;
-        const profiles = await WorkerProfile.find(filter).populate("userId", "name phone location").sort({ ratingAvg: -1 });
+        let profiles;
+        if (request.query.lat && request.query.lng) {
+            const maxDistance = Number(request.query.radiusKm || 10) * 1000;
+            profiles = await WorkerProfile.find({ ...filter, location: { $near: { $geometry: { type: "Point", coordinates: [Number(request.query.lng), Number(request.query.lat)] }, $maxDistance: maxDistance } } }).populate("userId", "name phone location").sort({ ratingAvg: -1 });
+        } else {
+            profiles = await WorkerProfile.find(filter).populate("userId", "name phone location").sort({ ratingAvg: -1 });
+        }
         response.json({ success: true, data: profiles, message: "Workers fetched" });
     } catch (error) { next(error); }
 });
 
-router.post("/", requireAuth, requireRole("admin", "coordinator", "worker"), async (request, response, next) => {
+router.post("/", requireAuth, requireRole("admin", "coordinator"), upload.single("certificate"), async (request, response, next) => {
     try {
-        const { name, phone, email, skills = [], certifications = [], availability = true, location } = request.body;
+        const { name, phone, email, availability = true, location, coordinates } = request.body;
+        const skills = typeof request.body.skills === "string" ? JSON.parse(request.body.skills) : request.body.skills || [];
+        const parsedLocation = typeof location === "string" ? JSON.parse(location) : location;
         if (!name || !phone || skills.length === 0) return response.status(400).json({ success: false, message: "name, phone and at least one skill are required" });
-        const user = await User.create({ name, phone, email, role: "worker", location });
-        const profile = await WorkerProfile.create({ userId: user._id, skills, certifications, availability });
+        const user = await User.create({ name, phone, email, role: "worker", location: parsedLocation });
+        const certifications = request.file ? [`/uploads/certificates/${request.file.filename}`] : [];
+        const profile = await WorkerProfile.create({ userId: user._id, skills, certifications, availability: availability !== "false", location: coordinates ? { type: "Point", coordinates: JSON.parse(coordinates) } : undefined });
         response.status(201).json({ success: true, data: await profile.populate("userId", "name phone location"), message: "Worker submitted for verification" });
+    } catch (error) { next(error); }
+});
+
+router.patch("/me", requireAuth, requireRole("worker"), upload.single("certificate"), async (request, response, next) => {
+    try {
+        const { name, phone, availability = true, location } = request.body;
+        const skills = typeof request.body.skills === "string" ? JSON.parse(request.body.skills) : request.body.skills || [];
+        const parsedLocation = typeof location === "string" ? JSON.parse(location) : location;
+        await User.findByIdAndUpdate(request.user._id, { name, phone, location: parsedLocation }, { runValidators: true });
+        const updates = { skills, availability: availability !== "false" };
+        if (request.file) updates.$push = { certifications: `/uploads/certificates/${request.file.filename}` };
+        const profile = await WorkerProfile.findOneAndUpdate({ userId: request.user._id }, updates, { new: true, upsert: true, runValidators: true }).populate("userId", "name phone location");
+        response.json({ success: true, data: profile, message: "Worker profile updated" });
     } catch (error) { next(error); }
 });
 

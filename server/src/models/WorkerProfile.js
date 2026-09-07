@@ -9,9 +9,14 @@ const workerProfileSchema = new mongoose.Schema(
         availability: { type: Boolean, default: true },
         ratingAvg: { type: Number, default: 0 },
         jobsCompleted: { type: Number, default: 0 },
+        location: {
+            type: { type: String, enum: ["Point"] },
+            coordinates: { type: [Number] },
+        },
     },
     { timestamps: true }
 );
 
 workerProfileSchema.index({ verificationStatus: 1, skills: 1 });
+workerProfileSchema.index({ location: "2dsphere" });
 export default mongoose.model("WorkerProfile", workerProfileSchema);

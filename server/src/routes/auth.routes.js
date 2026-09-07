@@ -3,6 +3,7 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import User from "../models/User.js";
 import WorkerProfile from "../models/WorkerProfile.js";
+import { verifyFirebaseToken } from "../firebase.js";
 
 const router = Router();
 const signToken = (user) => jwt.sign({ userId: user._id, role: user.role }, process.env.JWT_SECRET || "gigconnect-development-secret", { expiresIn: "7d" });
@@ -29,6 +30,17 @@ router.post("/login", async (request, response, next) => {
         const user = await User.findOne(email ? { email } : { phone }).select("+passwordHash");
         if (!user || !user.passwordHash || !(await bcrypt.compare(password || "", user.passwordHash))) return response.status(401).json({ success: false, message: "Invalid credentials" });
         return response.json({ success: true, data: { user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token: signToken(user) }, message: "Logged in" });
+    } catch (error) { next(error); }
+});
+
+router.post("/firebase", async (request, response, next) => {
+    try {
+        const token = request.headers.authorization?.replace(/^Bearer\s+/i, "");
+        if (!token) return response.status(401).json({ success: false, message: "Firebase token required" });
+        const identity = await verifyFirebaseToken(token);
+        let user = await User.findOne({ firebaseUid: identity.uid });
+        if (!user) user = await User.create({ firebaseUid: identity.uid, name: identity.name || identity.phone_number || identity.email || "GigConnect member", email: identity.email, phone: identity.phone_number, role: "customer" });
+        return response.json({ success: true, data: { user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token: signToken(user) }, message: "Firebase account connected" });
     } catch (error) { next(error); }
 });
 

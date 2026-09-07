@@ -1,17 +1,36 @@
+import { showToast } from "./toast";
+
 const API_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
 
 export async function apiRequest(path, options = {}) {
+    const isFormData = options.body instanceof FormData;
     const response = await fetch(`${API_URL}${path}`, {
-        headers: { "Content-Type": "application/json", ...options.headers },
+        headers: { ...(isFormData ? {} : { "Content-Type": "application/json" }), ...options.headers },
         ...options,
     });
     const payload = await response.json().catch(() => ({}));
-    if (!response.ok) throw new Error(payload.message || "Request failed");
+    if (!response.ok) {
+        const error = new Error(payload.message || "Request failed");
+        showToast(error.message);
+        throw error;
+    }
     return payload;
 }
 
-export const getWorkers = (skill) => apiRequest(`/api/workers?skill=${encodeURIComponent(skill)}`);
+export const getWorkers = (skill, coordinates) => {
+    const params = new URLSearchParams({ skill });
+    if (coordinates) { params.set("lat", coordinates.lat); params.set("lng", coordinates.lng); params.set("radiusKm", "10"); }
+    return apiRequest(`/api/workers?${params.toString()}`);
+};
 export const register = (data) => apiRequest("/api/auth/register", { method: "POST", body: JSON.stringify(data) });
 export const login = (data) => apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify(data) });
+export const loginWithFirebase = (idToken) => apiRequest("/api/auth/firebase", { method: "POST", headers: { Authorization: `Bearer ${idToken}` } });
 export const createBooking = (data, token) => apiRequest("/api/bookings", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
 export const getBookings = (token) => apiRequest("/api/bookings", { headers: { Authorization: `Bearer ${token}` } });
+export const updateBookingStatus = (bookingId, status, token) => apiRequest(`/api/bookings/${bookingId}/status`, { method: "PATCH", body: JSON.stringify({ status }), headers: { Authorization: `Bearer ${token}` } });
+export const getAdminOverview = (token) => apiRequest("/api/admin/overview", { headers: { Authorization: `Bearer ${token}` } });
+export const updateWorkerVerification = (workerId, status, token) => apiRequest(`/api/workers/${workerId}/verification`, { method: "PATCH", body: JSON.stringify({ status }), headers: { Authorization: `Bearer ${token}` } });
+export const submitRating = (data, token) => apiRequest("/api/ratings", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
+export const registerWorker = (data, token) => apiRequest("/api/workers", { method: "POST", body: data, headers: { Authorization: `Bearer ${token}` } });
+export const updateMyWorkerProfile = (data, token) => apiRequest("/api/workers/me", { method: "PATCH", body: data, headers: { Authorization: `Bearer ${token}` } });
+export const createPaymentOrder = (bookingId, token) => apiRequest("/api/payments/orders", { method: "POST", body: JSON.stringify({ bookingId }), headers: { Authorization: `Bearer ${token}` } });

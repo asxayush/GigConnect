@@ -11,6 +11,8 @@ const bookingSchema = new mongoose.Schema(
         status: { type: String, enum: ["Requested", "Assigned", "In Progress", "Completed", "Cancelled"], default: "Requested" },
         isEmergency: { type: Boolean, default: false },
         price: { type: Number, min: 0 },
+        paymentStatus: { type: String, enum: ["unpaid", "order_created", "paid", "failed"], default: "unpaid" },
+        paymentOrderId: String,
     },
     { timestamps: true }
 );

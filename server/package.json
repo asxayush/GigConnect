@@ -8,8 +8,10 @@
     "firebase-admin": "^14.3.0",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.9.5",
+    "multer": "^2.3.0",
     "nodemon": "^3.1.14",
-    "nodmeon": "^0.0.1-security"
+    "nodmeon": "^0.0.1-security",
+    "razorpay": "^2.9.8"
   },
   "name": "server",
   "version": "1.0.0",
