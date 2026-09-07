@@ -27,10 +27,22 @@ export const sendPhoneOTP = async (phoneNumber) => {
         throw new Error("Enter a phone number with country code, for example +919876543210");
     }
 
+    let recaptchaContainer = document.getElementById("recaptcha-container");
+
+    if (!recaptchaContainer) {
+        recaptchaContainer = document.createElement("div");
+        recaptchaContainer.id = "recaptcha-container";
+        recaptchaContainer.style.position = "fixed";
+        recaptchaContainer.style.left = "-10000px";
+        recaptchaContainer.style.width = "1px";
+        recaptchaContainer.style.height = "1px";
+        document.body.appendChild(recaptchaContainer);
+    }
+
     if (!window.recaptchaVerifier) {
         window.recaptchaVerifier = new RecaptchaVerifier(
             auth,
-            "recaptcha-container",
+            recaptchaContainer,
             { size: "invisible" }
         );
     }

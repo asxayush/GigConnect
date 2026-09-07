@@ -30,8 +30,6 @@ function SignUp() {
       <button onClick={() => verifyPhoneOTP(otp)}>
         Verify OTP
       </button>
-
-      <div id="recaptcha-container" />
     </>
   );
 }
