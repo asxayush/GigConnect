@@ -11,7 +11,11 @@ router.post("/register", async (request, response, next) => {
     try {
         const { name, email, phone, password, role = "customer", location } = request.body;
         if (!name || !password || (!email && !phone)) return response.status(400).json({ success: false, message: "name, password and email or phone are required" });
-        const existing = await User.findOne({ $or: [{ email: email || null }, { phone: phone || null }] });
+        if (!["customer", "worker"].includes(role)) return response.status(400).json({ success: false, message: "Invalid registration role" });
+        const identityChecks = [];
+        if (email) identityChecks.push({ email });
+        if (phone) identityChecks.push({ phone });
+        const existing = await User.findOne({ $or: identityChecks });
         if (existing) return response.status(409).json({ success: false, message: "An account already exists" });
         const user = await User.create({ name, email, phone, passwordHash: await bcrypt.hash(password, 10), role, location });
         if (role === "worker") await WorkerProfile.create({ userId: user._id });

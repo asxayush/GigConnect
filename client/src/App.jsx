@@ -1,5 +1,6 @@
 import { useState } from "react"
-import { AdminView, BookingView, DetailView, Home, RatingView, WorkerRegistration } from "./components/Home/Home"
+import { AuthView, BookingView, DetailView, Home, RatingView, WorkerRegistration } from "./components/Home/Home"
+import AdminDashboard from "./components/AdminDashboard/AdminDashboard"
 import './App.css'
 
 function App() {
@@ -19,9 +20,9 @@ function App() {
           <button className={view === "register" ? "active" : ""} onClick={() => navigate("register")}>Register a worker</button>
           <button className={view === "admin" ? "active" : ""} onClick={() => navigate("admin")}>Federation desk</button>
         </nav>
-        <button className="account-button" onClick={() => navigate("register")}>Sign in</button>
+        <button className="account-button" onClick={() => navigate("auth")}>Sign in</button>
       </header>
-      <main>{view === "home" && <Home onNavigate={navigate} />}{view === "booking" && <BookingView onNavigate={navigate} />}{view === "detail" && <DetailView onNavigate={navigate} />}{view === "register" && <WorkerRegistration />}{view === "admin" && <AdminView />}{view === "rating" && <RatingView onNavigate={navigate} />}</main>
+      <main>{view === "home" && <Home onNavigate={navigate} />}{view === "booking" && <BookingView onNavigate={navigate} />}{view === "detail" && <DetailView onNavigate={navigate} />}{view === "register" && <WorkerRegistration />}{view === "admin" && <AdminDashboard />}{view === "rating" && <RatingView onNavigate={navigate} />}{view === "auth" && <AuthView onNavigate={navigate} />}</main>
       <footer className="site-footer"><span>GigConnect</span><span>Cooperative work. Neighbourhood trust.</span><span>Delhi NCR · 2026</span></footer>
     </div>
   )
