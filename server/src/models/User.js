@@ -8,9 +8,11 @@ const userSchema = new mongoose.Schema(
         firebaseUid: { type: String, unique: true, sparse: true },
         passwordHash: { type: String, select: false },
         role: { type: String, enum: ["customer", "worker", "admin", "coordinator"], default: "customer" },
+        avatar: { type: String, default: "" },
+        gender: { type: String, default: "" },
         location: { lat: Number, lng: Number, area: String },
     },
     { timestamps: true }
 );
 
-export default mongoose.model("User", userSchema);
+export default mongoose.models.User || mongoose.model("User", userSchema);

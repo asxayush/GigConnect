@@ -30,6 +30,8 @@
     overflow-y: auto;
     background: var(--white);
     border-top: 5px solid var(--accent);
+    border-radius: 16px;
+    font-family: 'Plus Jakarta Sans', Mukta, sans-serif;
     box-shadow: 0 24px 56px rgba(38, 65, 92, 0.3);
     animation: modalIn 0.22s ease-out;
     scroll-behavior: smooth;

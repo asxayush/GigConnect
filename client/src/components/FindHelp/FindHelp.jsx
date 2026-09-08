@@ -1,11 +1,56 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
+import { useTranslation } from "react-i18next";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
+import { getWorkers } from "../../api";
+import VoiceAssistant from "../VoiceAssistant/VoiceAssistant";
 
 export default function FindHelp({ onNavigate }) {
+  const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState("all");
-  const [searchLocation, setSearchLocation] = useState("Indiranagar, Bengaluru / 560038");
-  const [serviceWindow, setServiceWindow] = useState("Today, Afternoon (2 PM - 5 PM)");
+  const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const [searchLocation, setSearchLocation] = useState("Connaught Place, New Delhi / 110001");
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const d = new Date();
+    d.setHours(d.getHours() + 2);
+    d.setMinutes(0, 0, 0);
+    return d;
+  });
   const [loadingMore, setLoadingMore] = useState(false);
   const [allLoaded, setAllLoaded] = useState(false);
+
+  // Close dropdown on outside click or Escape key
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setIsServiceDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setIsServiceDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, []);
+
+  const serviceOptions = [
+    { id: "all", label: "All Crafts & Trades", icon: "handyman", count: "142 Pros" },
+    { id: "plumbing", label: "Plumbing & Water Systems", icon: "plumbing", count: "38 Pros" },
+    { id: "electrical", label: "Electrical & Wiring", icon: "bolt", count: "29 Pros" },
+    { id: "cleaning", label: "Deep Cleaning & Sanitization", icon: "cleaning_services", count: "44 Pros" },
+    { id: "carpentry", label: "Carpentry & Woodcraft", icon: "carpenter", count: "18 Pros" },
+    { id: "cooking", label: "Home Cooking & Meals", icon: "skillet", count: "13 Pros" },
+  ];
+
+  const activeService = serviceOptions.find((opt) => opt.id === selectedCategory) || serviceOptions[0];
 
   const categoryChips = [
     { id: "all", label: "All Services (142)" },
@@ -109,21 +154,70 @@ export default function FindHelp({ onNavigate }) {
     },
   ];
 
+  const [apiWorkers, setApiWorkers] = useState([]);
+
+  useEffect(() => {
+    const skillMap = {
+      all: "",
+      plumbing: "Plumber",
+      electrical: "Electrician",
+      cleaning: "Domestic help",
+      carpentry: "Carpenter",
+      cooking: "Home Cooking",
+      driver: "Driver",
+      gardener: "Gardener",
+    };
+    const targetSkill = skillMap[selectedCategory] || "";
+    getWorkers(targetSkill)
+      .then((res) => {
+        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+          const mapped = res.data.map((p) => {
+            const rawSkill = p.skills?.[0]?.toLowerCase() || "";
+            const derivedCraft = rawSkill.includes("plumb") ? "plumbing"
+              : rawSkill.includes("elect") ? "electrical"
+              : rawSkill.includes("clean") || rawSkill.includes("domestic") ? "cleaning"
+              : rawSkill.includes("carp") ? "carpentry"
+              : rawSkill.includes("cook") ? "cooking"
+              : "all";
+
+            return {
+              id: p._id,
+              userId: p.userId?._id,
+              name: p.userId?.name || "Verified Cooperative Tradesperson",
+              craft: selectedCategory === "all" ? derivedCraft : selectedCategory,
+              role: `${p.skills?.join(" • ") || "Master Tradesperson"}`,
+              rating: Number(p.ratingAvg || 4.92).toFixed(2),
+              jobs: `${p.jobsCompleted || 120} jobs completed`,
+              credential: "Co-op Verified Member",
+              credentialIcon: "verified",
+              skills: p.skills || [],
+              rateType: "co-op floor rate",
+              rate: "₹349",
+              image: p.photoUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
+            };
+          });
+          setApiWorkers(mapped);
+        }
+      })
+      .catch((err) => {
+        console.warn("Workers fetch fallback to curated list:", err.message);
+      });
+  }, [selectedCategory]);
+
+  const activeWorkerList = apiWorkers.length > 0 ? apiWorkers : workers;
+
   const filteredWorkers = useMemo(() => {
-    if (selectedCategory === "all") return workers;
-    return workers.filter((w) => w.craft === selectedCategory);
-  }, [selectedCategory, workers]);
+    if (selectedCategory === "all") return activeWorkerList;
+    return activeWorkerList.filter((w) => w.craft === selectedCategory || w.role?.toLowerCase()?.includes(selectedCategory));
+  }, [selectedCategory, activeWorkerList]);
 
   const handleBook = (worker) => {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    tomorrow.setHours(14, 0, 0, 0);
-
     onNavigate?.("booking", {
       name: worker.name,
+      userId: worker.userId || worker.id,
       skills: [worker.role],
       price: worker.rate,
-      prefilledDate: tomorrow.toISOString(),
+      prefilledDate: selectedDate.toISOString(),
     });
   };
 
@@ -167,7 +261,7 @@ export default function FindHelp({ onNavigate }) {
               <span>/</span>
               <span className="text-primary font-semibold">Verified Guild Directory</span>
               <span className="w-1.5 h-1.5 rounded-full bg-secondary-container inline-block" />
-              <span className="text-secondary font-medium">Bengaluru South Ward #174</span>
+              <span className="text-secondary font-medium">Delhi NCR Central Hub • Connaught Place</span>
             </div>
 
             {/* Live Collective Rate Guarantee Pill */}
@@ -182,7 +276,7 @@ export default function FindHelp({ onNavigate }) {
           </div>
 
           {/* Sticky Integrated Search & Filter Hub */}
-          <section className="sticky top-20 z-30 mb-space-8">
+          <section className="sticky top-20 z-40 mb-space-8">
             <div className="bg-surface-container-lowest rounded-2xl shadow-md p-space-4 border border-border-tone/40">
               <form
                 className="grid grid-cols-1 lg:grid-cols-12 gap-space-3 items-center"
@@ -190,27 +284,89 @@ export default function FindHelp({ onNavigate }) {
                   e.preventDefault();
                 }}
               >
-                {/* Service Category Picker */}
-                <div className="lg:col-span-4 flex items-center bg-surface-container-low rounded-full px-space-4 py-space-2">
-                  <span className="material-symbols-outlined text-primary text-[20px] mr-space-2">handyman</span>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="serviceType">
-                      Service Type
-                    </label>
-                    <select
-                      id="serviceType"
-                      value={selectedCategory}
-                      onChange={(e) => setSelectedCategory(e.target.value)}
-                      className="bg-transparent font-title-md text-body-md text-on-surface focus:outline-none cursor-pointer border-none pt-0.5"
+                {/* Custom Service Category Picker Dropdown */}
+                <div ref={dropdownRef} className="relative lg:col-span-4">
+                  <button
+                    type="button"
+                    onClick={() => setIsServiceDropdownOpen((prev) => !prev)}
+                    className="w-full flex items-center justify-between bg-surface-container-low hover:bg-surface-container rounded-full px-space-4 py-space-2 cursor-pointer transition-colors border-none text-left select-none"
+                    aria-haspopup="listbox"
+                    aria-expanded={isServiceDropdownOpen}
+                  >
+                    <div className="flex items-center min-w-0 flex-1">
+                      <span className="material-symbols-outlined text-primary text-[20px] mr-space-2 shrink-0">
+                        {activeService.icon}
+                      </span>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="font-label-sm text-label-sm text-on-surface-variant leading-none">
+                          Service Type
+                        </span>
+                        <span className="font-body-md text-body-md text-on-surface font-semibold truncate pt-0.5">
+                          {activeService.label}
+                        </span>
+                      </div>
+                    </div>
+                    <span
+                      className={`material-symbols-outlined text-[20px] transition-transform duration-200 shrink-0 ml-1 ${
+                        isServiceDropdownOpen ? "rotate-180 text-primary" : "text-on-surface-variant"
+                      }`}
                     >
-                      <option value="all">All Crafts & Trades</option>
-                      <option value="plumbing">Plumbing & Water Systems</option>
-                      <option value="electrical">Electrical & Wiring</option>
-                      <option value="cleaning">Deep Cleaning & Sanitization</option>
-                      <option value="carpentry">Carpentry & Woodcraft</option>
-                      <option value="cooking">Home Cooking & Meals</option>
-                    </select>
-                  </div>
+                      expand_more
+                    </span>
+                  </button>
+
+                  {/* Custom Dropdown Options Listbox Floating Menu */}
+                  {isServiceDropdownOpen && (
+                    <div
+                      role="listbox"
+                      className="absolute top-[calc(100%+8px)] left-0 right-0 w-full min-w-[270px] bg-surface-container-lowest border border-surface-container-high rounded-2xl shadow-[0_16px_36px_rgba(0,53,72,0.18)] z-[100] py-2 overflow-hidden"
+                      style={{ backdropFilter: "blur(12px)" }}
+                    >
+                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-surface-container-high/60 mb-1">
+                        Select Cooperative Trade
+                      </div>
+                      {serviceOptions.map((opt) => {
+                        const isSelected = selectedCategory === opt.id;
+                        return (
+                          <div
+                            key={opt.id}
+                            role="option"
+                            aria-selected={isSelected}
+                            onClick={() => {
+                              setSelectedCategory(opt.id);
+                              setIsServiceDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between px-3.5 py-2.5 text-left transition-colors cursor-pointer ${
+                              isSelected
+                                ? "bg-secondary-container/10 text-secondary font-bold"
+                                : "text-on-surface hover:bg-surface-container-low"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span
+                                className={`material-symbols-outlined text-[18px] ${
+                                  isSelected ? "text-secondary" : "text-primary"
+                                }`}
+                              >
+                                {opt.icon}
+                              </span>
+                              <span className="font-body-md text-body-md truncate">{opt.label}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 shrink-0 pl-2">
+                              <span className="text-[11px] font-semibold text-on-surface-variant/80">
+                                {opt.count}
+                              </span>
+                              {isSelected && (
+                                <span className="material-symbols-outlined text-[16px] text-secondary">
+                                  check
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Location Field */}
@@ -235,14 +391,18 @@ export default function FindHelp({ onNavigate }) {
                   <span className="material-symbols-outlined text-primary text-[20px] mr-space-2">calendar_today</span>
                   <div className="flex flex-col flex-1 min-w-0">
                     <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="timeSlotInput">
-                      Service Window
+                      {t("findHelp.serviceWindow", "Service Window")}
                     </label>
-                    <input
+                    <DatePicker
                       id="timeSlotInput"
-                      type="text"
-                      value={serviceWindow}
-                      onChange={(e) => setServiceWindow(e.target.value)}
-                      className="bg-transparent font-body-md text-body-md text-on-surface focus:outline-none truncate border-none pt-0.5"
+                      selected={selectedDate}
+                      onChange={(date) => setSelectedDate(date || new Date())}
+                      showTimeSelect
+                      timeFormat="h:mm aa"
+                      timeIntervals={30}
+                      dateFormat="EEE, d MMM · h:mm aa"
+                      minDate={new Date()}
+                      className="bg-transparent font-body-md text-body-md text-on-surface focus:outline-none truncate border-none pt-0.5 w-full cursor-pointer"
                     />
                   </div>
                 </div>
@@ -261,9 +421,9 @@ export default function FindHelp({ onNavigate }) {
             </div>
           </section>
 
-          {/* Category Filter Chips Horizontal Scroller */}
-          <section aria-label="Craft Categories" className="mb-space-8 overflow-x-auto pb-space-2">
-            <div className="flex items-center gap-space-2 min-w-max">
+          {/* Category Filter Chips Horizontal Scroller & Voice Search */}
+          <section aria-label="Craft Categories" className="mb-space-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-4">
+            <div className="flex items-center gap-space-2 overflow-x-auto pb-space-2 min-w-0 flex-1">
               {categoryChips.map((chip) => {
                 const isActive = selectedCategory === chip.id;
                 return (
@@ -271,7 +431,7 @@ export default function FindHelp({ onNavigate }) {
                     key={chip.id}
                     type="button"
                     onClick={() => setSelectedCategory(chip.id)}
-                    className={`px-space-4 py-space-2 rounded-full font-label-md text-label-md transition-all shadow-sm border-none cursor-pointer ${
+                    className={`px-space-4 py-space-2 rounded-full font-label-md text-label-md transition-all shadow-sm border-none cursor-pointer shrink-0 ${
                       isActive
                         ? "bg-primary-container text-on-primary font-bold"
                         : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container"
@@ -282,6 +442,7 @@ export default function FindHelp({ onNavigate }) {
                 );
               })}
             </div>
+            <VoiceAssistant onServiceDetected={(cat) => setSelectedCategory(cat)} className="shrink-0" />
           </section>
 
           {/* Cooperative Transparency Banner */}
@@ -431,7 +592,7 @@ export default function FindHelp({ onNavigate }) {
               )}
             </button>
             <span className="font-label-sm text-label-sm text-on-surface-variant mt-space-2">
-              Showing {filteredWorkers.length} of 142 Cooperative Service Members in South Bengaluru
+              Showing {filteredWorkers.length} of 142 Cooperative Service Members in Delhi NCR
             </span>
           </div>
         </div>

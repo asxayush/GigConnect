@@ -1,10 +1,12 @@
-class ApiResponse{
-    constructor(statusCode, data, message = "Success"){
-        this.statusCode = statusCode
-        this.data = data
-        this.message = message
-        this.success = statusCode < 400
-    }
-}
+/**
+ * asyncHandler — wraps an async Express route handler and forwards any
+ * rejected promise to the next() error handler automatically.
+ *
+ * Usage:
+ *   router.get("/", asyncHandler(async (req, res) => { ... }));
+ */
+const asyncHandler = (fn) => (req, res, next) => {
+  Promise.resolve(fn(req, res, next)).catch(next);
+};
 
-export {ApiResponse}
+export default asyncHandler;

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import BookingForm from "../BookingTicket/BookingForm";
 
@@ -7,10 +7,15 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
   const [activeTab, setActiveTab] = useState("upcoming");
   const [searchQuery, setSearchQuery] = useState("");
   const [showBookingModal, setShowBookingModal] = useState(Boolean(selectedWorker));
-  const [bookingsList, setBookingsList] = useState([]);
   const [invoiceToast, setInvoiceToast] = useState("");
 
-  const sampleBookings = [
+  useEffect(() => {
+    if (selectedWorker) {
+      setShowBookingModal(true);
+    }
+  }, [selectedWorker]);
+
+  const initialSampleBookings = [
     {
       id: "GC-88421",
       category: "upcoming",
@@ -29,7 +34,7 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
       },
       schedule: "Tomorrow, Oct 24",
       time: "10:00 AM – 1:00 PM (3 Hours)",
-      address: "Flat 402, Palm Grove Heights, 17th Cross, Sector 3, HSR Layout, Bengaluru, 560102",
+      address: "Flat 402, DLF Phase 2, Cyber City Corridor, Gurugram, Delhi NCR, 122002",
       price: "₹1,499",
       priceLabel: "Co-op Guaranteed Tariff",
       priceSub: "Fair living wage model",
@@ -45,13 +50,13 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
       worker: null,
       matchingInfo: {
         title: "Matching Co-op Plumber",
-        desc: "Assigning nearest verified plumbing member in Sector 4, HSR.",
+        desc: "Assigning nearest verified plumbing member in Cyber City Corridor, Gurugram.",
         avgTime: "Average match time: 14 mins",
         icon: "plumbing",
       },
       schedule: "Friday, Oct 25",
       time: "03:30 PM – 05:00 PM",
-      address: "Palm Grove Heights, Flat 402, Bengaluru",
+      address: "DLF Phase 2, Cyber City Corridor, Gurugram, Delhi NCR",
       price: "₹349",
       priceLabel: "Base Estimate",
       priceSub: "Parts charged at actual MRP",
@@ -83,7 +88,9 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
     },
   ];
 
-  const filteredBookings = sampleBookings
+  const [bookingsList, setBookingsList] = useState(initialSampleBookings);
+
+  const filteredBookings = bookingsList
     .filter((b) => (activeTab === "all" ? true : b.category === activeTab))
     .filter((b) => {
       if (!searchQuery.trim()) return true;
@@ -101,6 +108,32 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
   };
 
   const handleNewBookingCreated = (data) => {
+    if (data) {
+      const newBookingItem = {
+        id: data._id || data.id || `GC-${Math.floor(10000 + Math.random() * 90000)}`,
+        category: "upcoming",
+        coopTag: "Cooperative Service",
+        title: data.serviceCategory || "Domestic Cooperative Service",
+        status: "Confirmed ✓",
+        statusType: "confirmed",
+        worker: {
+          name: selectedWorker?.name || "Rameshwar Kumar",
+          memberId: selectedWorker?.coopId || "Member #2910",
+          rating: selectedWorker?.rating || "4.9",
+          jobs: "Verified Co-op Guild Member",
+          image: selectedWorker?.avatar || selectedWorker?.image || "/illustrations/plumber.jpg",
+          badges: ["Aadhaar Verified", "Co-op Certified"],
+        },
+        schedule: `Scheduled: ${data.scheduledAt ? new Date(data.scheduledAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Today • Immediate"}`,
+        time: "Cooperative Direct Payout • 0% Surge Rate",
+        address: data.address || "Delhi-NCR",
+        price: `₹${data.price || 249}`,
+        priceLabel: "Settled Tariff",
+        priceSub: "Escrow & Guarantee Protected",
+        hasEscrowBanner: true,
+      };
+      setBookingsList((prev) => [newBookingItem, ...prev]);
+    }
     setShowBookingModal(false);
     setActiveTab("upcoming");
   };
@@ -132,7 +165,7 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
             <div className="flex flex-col gap-space-2 max-w-2xl">
               <div className="flex items-center gap-space-2 text-primary font-label-sm text-label-sm uppercase tracking-wider">
                 <span className="inline-block w-2 h-2 rounded-full bg-secondary-container" />
-                <span>Sahakari Member Portal • Bengaluru South Unit</span>
+                <span>Sahakari Member Portal • Delhi NCR Central Hub</span>
               </div>
               <h1 className="font-headline-lg text-headline-lg text-on-surface m-0 font-bold">
                 My Bookings &amp; Service History
@@ -170,33 +203,30 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
               <button
                 type="button"
                 onClick={() => setActiveTab("upcoming")}
-                className={`px-space-4 py-space-2 rounded-full font-label-lg text-label-lg transition-all duration-200 border-none cursor-pointer ${
-                  activeTab === "upcoming"
-                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface font-medium bg-transparent"
-                }`}
+                className={`px-space-4 py-space-2 rounded-full font-label-lg text-label-lg transition-all duration-200 border-none cursor-pointer ${activeTab === "upcoming"
+                  ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                  : "text-on-surface-variant hover:text-on-surface font-medium bg-transparent"
+                  }`}
               >
                 Upcoming (2)
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("completed")}
-                className={`px-space-4 py-space-2 rounded-full font-label-lg text-label-lg transition-all duration-200 border-none cursor-pointer ${
-                  activeTab === "completed"
-                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface font-medium bg-transparent"
-                }`}
+                className={`px-space-4 py-space-2 rounded-full font-label-lg text-label-lg transition-all duration-200 border-none cursor-pointer ${activeTab === "completed"
+                  ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                  : "text-on-surface-variant hover:text-on-surface font-medium bg-transparent"
+                  }`}
               >
                 Past Completed (8)
               </button>
               <button
                 type="button"
                 onClick={() => setActiveTab("cancelled")}
-                className={`px-space-4 py-space-2 rounded-full font-label-lg text-label-lg transition-all duration-200 border-none cursor-pointer ${
-                  activeTab === "cancelled"
-                    ? "bg-primary-container text-on-primary font-bold shadow-sm"
-                    : "text-on-surface-variant hover:text-on-surface font-medium bg-transparent"
-                }`}
+                className={`px-space-4 py-space-2 rounded-full font-label-lg text-label-lg transition-all duration-200 border-none cursor-pointer ${activeTab === "cancelled"
+                  ? "bg-primary-container text-on-primary font-bold shadow-sm"
+                  : "text-on-surface-variant hover:text-on-surface font-medium bg-transparent"
+                  }`}
               >
                 Cancelled (1)
               </button>
@@ -477,18 +507,18 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
                         <>
                           <button
                             type="button"
-                            onClick={() => onNavigate("admin")}
-                            className="px-space-4 py-space-2 rounded-full font-label-md text-label-md bg-surface-container-high text-primary hover:bg-surface-variant font-bold transition-all flex items-center gap-2 border-none cursor-pointer"
+                            onClick={() => onNavigate("messages", b.worker)}
+                            className="px-space-4 py-space-2 rounded-full font-label-md text-label-md bg-[#00a884]/15 text-[#008069] hover:bg-[#00a884]/25 font-bold transition-all flex items-center gap-2 border-none cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[18px]">chat</span>
-                            <span>Chat</span>
+                            <span>WhatsApp Chat</span>
                           </button>
                           <button
                             type="button"
-                            className="px-space-5 py-space-2 rounded-full font-label-md text-label-md bg-secondary-container text-on-secondary font-bold shadow-[0_4px_14px_rgba(253,101,30,0.25)] hover:opacity-95 active:scale-95 transition-all flex items-center gap-2 border-none cursor-pointer"
+                            className="px-space-5 py-space-2 rounded-full font-label-md text-label-md bg-secondary-container text-on-secondary font-bold shadow-[0_4px_14px_rgba(253,101,30,0.25)] hover:opacity-95 active:scale-95 transition-all flex items-center gap- border-none cursor-pointer"
                           >
-                            <span className="material-symbols-outlined text-[18px]">call</span>
-                            <span>Contact Worker / Co-op Desk</span>
+                            <span className="material-symbols-outlined text-[9x]">call</span>
+                            <span>Contact Worker</span>
                           </button>
                         </>
                       )}
@@ -578,8 +608,8 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
 
       {/* Booking Form Modal when opened */}
       {showBookingModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-navy-anchor/45 backdrop-blur-sm">
-          <div className="bg-surface-container-lowest rounded-2xl shadow-2xl p-space-6 max-w-lg w-full max-h-[90vh] overflow-y-auto border border-border-tone/40">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-navy-anchor/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto overflow-x-hidden border border-border-tone/40">
             <BookingForm
               worker={selectedWorker}
               prefilledDate={selectedWorker?.prefilledDate}
@@ -593,12 +623,12 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
       {/* Floating 24x7 Help Button */}
       <aside className="fixed bottom-6 left-6 z-50">
         <button
-          className="flex items-center gap-space-2 px-space-4 py-space-2 bg-primary-container text-on-primary font-label-md text-label-md rounded-full shadow-lg hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer"
+          className="flex items-center gap-space-2 px-space-4 py-space-2 bg-[#008069] text-white font-label-md text-label-md rounded-full shadow-lg hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer"
           type="button"
-          onClick={() => onNavigate?.("admin")}
+          onClick={() => onNavigate?.("messages")}
         >
           <span className="material-symbols-outlined text-[18px]">chat</span>
-          <span>Need Help? | 24x7 Cooperative Sahayata</span>
+          <span>Live Worker & Co-op Chat | 24x7 Support</span>
         </button>
       </aside>
     </div>

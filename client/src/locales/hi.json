@@ -5,12 +5,26 @@
     "registerWorker": "कामगार पंजीकरण",
     "federationDesk": "संघ डेस्क",
     "joinGigConnect": "GigConnect से जुड़ें",
+    "federationSub": "सहकारी महासंघ",
+    "langToggle": "🇬🇧 English / हि",
     "hindi": "हिन्दी",
     "english": "English"
   },
   "footer": {
     "tagline": "सहकारी काम। पड़ोस का भरोसा।",
-    "location": "दिल्ली NCR · 2026"
+    "location": "दिल्ली NCR · 2026",
+    "brand": "GigConnect सहकारी महासंघ",
+    "discover": "खोजें",
+    "company": "कंपनी",
+    "community": "समुदाय",
+    "allServices": "सभी सेवाएं",
+    "servicesByCity": "शहर अनुसार सेवाएं",
+    "costGuides": "लागत मार्गदर्शिका",
+    "aboutUs": "हमारे बारे में",
+    "cooperativeModel": "सहकारी मॉडल",
+    "careers": "करियर",
+    "legalNotice": "GigConnect एक पंजीकृत बहु-राज्य सहकारी समिति है जो निष्पक्ष श्रम कानूनों के तहत संचालित होती है। 100% टैरिफ सीधे सदस्य कारीगरों को दिया जाता है।",
+    "copyright": "© 2026 GigConnect सहकारी महासंघ। सर्वाधिकार सुरक्षित।"
   },
   "hero": {
     "kicker": "सहकारी-स्वामित्व सेवा नेटवर्क",
@@ -262,9 +276,43 @@
     "tomorrow": "कल",
     "weekend": "इस सप्ताहांत"
   },
+  "stitchHome": {
+    "matchKicker": "सहकारी मिलानकर्ता",
+    "matchTitle": "आइए अपना सही सहायक खोजें",
+    "matchSubtitle": "सत्यापित स्थानीय कारीगरों को पारदर्शी, अग्रिम कीमतों के साथ जोड़ें। शून्य कमीशन, सुरक्षित न्यूनतम मजदूरी।",
+    "bookIn60s": "60 सेकंड में बुक करें",
+    "speakQuery": "बोल के बताएं",
+    "coopBadge": "100% कामगार स्वामित्व",
+    "activeNearby": "सक्रिय नजदीकी कामगार",
+    "liveRadar": "लाइव रणनीतिक रडार",
+    "spotlightBadge": "गिल्ड स्पॉटलाइट",
+    "requestHelp": "मदद का अनुरोध करें"
+  },
+  "findHelp": {
+    "breadcrumb": "सत्यापित गिल्ड निर्देशिका",
+    "serviceType": "सेवा प्रकार",
+    "locality": "इलाका / पिनकोड",
+    "serviceWindow": "सेवा समय",
+    "filterBtn": "कामगार फ़िल्टर करें",
+    "allCrafts": "सभी शिल्प और व्यवसाय",
+    "bookNow": "अभी बुक करें",
+    "floorStandard": "न्यूनतम मानक"
+  },
+  "registerWorker": {
+    "portalBadge": "कामगार सदस्यता पोर्टल",
+    "title": "सहकारी में शामिल हों। अपना भविष्य संवारें।",
+    "subtitle": "शून्य कमीशन, गारंटीकृत उचित न्यूनतम मजदूरी, व्यापक चिकित्सा कवरेज और प्रत्येक सत्यापित कारीगर के लिए समान लोकतांत्रिक वोट अधिकार।",
+    "kycVerified": "सत्यापित ✓ UIDAI ई-हस्ताक्षर तैयार",
+    "startKyc": "लाइव UIDAI ई-केवाईसी शुरू करें",
+    "reverify": "लाइव बायोमेट्रिक्स पुनः सत्यापित करें",
+    "replaceCard": "कार्ड बदलें",
+    "kycSuccess": "आधार ई-केवाईसी सफलतापूर्वक सत्यापित!",
+    "saveAndContinue": "सहेजें और आगे बढ़ें"
+  },
   "common": {
     "loading": "लोड हो रहा है...",
     "error": "कुछ गलत हो गया। कृपया पुनः प्रयास करें।",
-    "close": "बंद करें"
+    "close": "बंद करें",
+    "logoLabel": "GigConnect सहकारी महासंघ"
   }
 }

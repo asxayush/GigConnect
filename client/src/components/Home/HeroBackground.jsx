@@ -9,12 +9,12 @@ import { gsap } from "gsap";
  */
 
 const SHAPES = [
-    { cx: "15%",  cy: "20%", r: 220, fill: "#E8720C", opacity: 0.28, delay: 0,    dur: 22 },
-    { cx: "75%",  cy: "15%", r: 180, fill: "#26415C", opacity: 0.22, delay: 3,    dur: 26 },
-    { cx: "50%",  cy: "60%", r: 260, fill: "#2F6F4E", opacity: 0.20, delay: 6,    dur: 30 },
-    { cx: "85%",  cy: "75%", r: 150, fill: "#E8720C", opacity: 0.18, delay: 1.5,  dur: 20 },
-    { cx: "20%",  cy: "80%", r: 200, fill: "#26415C", opacity: 0.16, delay: 9,    dur: 28 },
-    { cx: "60%",  cy: "35%", r: 130, fill: "#2F6F4E", opacity: 0.14, delay: 4.5,  dur: 24 },
+    { cx: "15%",  cy: "20%", r: 220, fill: "#fd651e", opacity: 0.22, delay: 0,    dur: 22 },
+    { cx: "75%",  cy: "15%", r: 180, fill: "#003548", opacity: 0.28, delay: 3,    dur: 26 },
+    { cx: "50%",  cy: "60%", r: 260, fill: "#005321", opacity: 0.18, delay: 6,    dur: 30 },
+    { cx: "85%",  cy: "75%", r: 150, fill: "#fd651e", opacity: 0.16, delay: 1.5,  dur: 20 },
+    { cx: "20%",  cy: "80%", r: 200, fill: "#0e4d64", opacity: 0.24, delay: 9,    dur: 28 },
+    { cx: "60%",  cy: "35%", r: 130, fill: "#003548", opacity: 0.18, delay: 4.5,  dur: 24 },
 ];
 
 export default function HeroBackground() {
@@ -83,12 +83,12 @@ export default function HeroBackground() {
                 ))}
             </svg>
 
-            {/* Subtle overlay to prevent blobs from overpowering the gradient */}
+            {/* Subtle overlay using Stitch tokens */}
             <div
                 style={{
                     position: "absolute",
                     inset: 0,
-                    background: "linear-gradient(118deg, rgba(0,255,136,0.35) 0%, rgba(108,255,187,0.2) 25%, rgba(255,83,211,0.3) 72%, rgba(255,0,255,0.25) 100%)",
+                    background: "linear-gradient(135deg, rgba(0,53,72,0.65) 0%, rgba(14,77,100,0.45) 60%, rgba(253,101,30,0.12) 100%)",
                 }}
             />
         </div>

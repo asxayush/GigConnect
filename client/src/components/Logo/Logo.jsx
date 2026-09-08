@@ -3,7 +3,7 @@
  * Geometric "GC" monogram — two interlocking arcs representing connection/cooperation.
  * Uses only --accent (#E8720C) and --white (#fffdf8). Scales perfectly at any size.
  */
-export default function Logo({ size = 38, accent = "#E8720C", white = "#fffdf8" }) {
+export default function Logo({ size = 38, accent = "#fd651e", white = "#ffffff" }) {
     return (
         <svg
             width={size}
@@ -14,8 +14,8 @@ export default function Logo({ size = 38, accent = "#E8720C", white = "#fffdf8" 
             aria-label="GigConnect"
             role="img"
         >
-            {/* Background square */}
-            <rect width="40" height="40" fill={accent} />
+            {/* Background square with smooth rounded corners */}
+            <rect width="40" height="40" rx="10" fill={accent} />
 
             {/* Left arc — represents "G" (large C-shape opening right) */}
             <path

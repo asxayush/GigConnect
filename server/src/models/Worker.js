@@ -84,4 +84,4 @@ const workerSchema = new mongoose.Schema(
 // Helpful compound indexes
 workerSchema.index({ verificationStatus: 1, createdAt: -1 });
 
-export default mongoose.model("Worker", workerSchema);
+export default mongoose.models.Worker || mongoose.model("Worker", workerSchema);

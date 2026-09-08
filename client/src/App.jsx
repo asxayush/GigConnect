@@ -11,6 +11,7 @@ import StitchFooter from "./components/Navigation/StitchFooter"
 import FederationDesk from "./components/FederationDesk/FederationDesk"
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard"
 import SignUp from "./components/SignUp/SignUp"
+import Messages from "./components/Messages/Messages"
 import Toast from "./components/Toast/Toast"
 import { showToast } from "./toast"
 import './App.css'
@@ -49,10 +50,11 @@ function App() {
         onToggleLanguage={toggleLanguage}
         currentLanguage={language}
       />
-      <main className="flex-1 w-full">
+      <main className="flex-1 w-full flex flex-col">
         {view === "home" && <StitchHome onNavigate={navigate} />}
         {view === "find-help" && <FindHelp onNavigate={navigate} />}
         {view === "booking" && <MyBookings selectedWorker={selectedRecord} onNavigate={navigate} />}
+        {view === "messages" && <Messages initialWorker={selectedRecord} onNavigate={navigate} />}
         {view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} />}
         {view === "register" && <RegisterWorker onNavigate={navigate} />}
         {view === "admin" && <FederationDesk onNavigate={navigate} />}
@@ -60,7 +62,7 @@ function App() {
         {view === "auth" && <SignUp onNavigate={navigate} />}
         {view === "public-register" && <SignUp onNavigate={navigate} />}
       </main>
-      <StitchFooter onNavigate={navigate} />
+      {view !== "messages" && <StitchFooter onNavigate={navigate} />}
     </div>
   )
 }

@@ -20,4 +20,4 @@ const workerProfileSchema = new mongoose.Schema(
 
 workerProfileSchema.index({ verificationStatus: 1, skills: 1 });
 workerProfileSchema.index({ location: "2dsphere" });
-export default mongoose.model("WorkerProfile", workerProfileSchema);
+export default mongoose.models.WorkerProfile || mongoose.model("WorkerProfile", workerProfileSchema);

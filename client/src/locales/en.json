@@ -1,16 +1,30 @@
 {
   "nav": {
-    "findHelp": "Find help",
-    "myBookings": "My bookings",
-    "registerWorker": "Register a worker",
-    "federationDesk": "Federation desk",
+    "findHelp": "Find Help",
+    "myBookings": "My Bookings",
+    "registerWorker": "Register a Worker",
+    "federationDesk": "Federation Desk",
     "joinGigConnect": "Join GigConnect",
+    "federationSub": "Sahakari Federation",
+    "langToggle": "🇮🇳 हिन्दी / EN",
     "hindi": "हिन्दी",
     "english": "English"
   },
   "footer": {
     "tagline": "Cooperative work. Neighbourhood trust.",
-    "location": "Delhi NCR · 2026"
+    "location": "Delhi NCR · 2026",
+    "brand": "GigConnect Cooperative",
+    "discover": "Discover",
+    "company": "Company",
+    "community": "Community",
+    "allServices": "All Services",
+    "servicesByCity": "Services by City",
+    "costGuides": "Cost Guides",
+    "aboutUs": "About Us",
+    "cooperativeModel": "Cooperative Model",
+    "careers": "Careers",
+    "legalNotice": "GigConnect is a registered multistate cooperative society operating under fair work statutes. 100% of tariff revenue is disbursed directly to member guilds.",
+    "copyright": "© 2026 GigConnect Sahakari Federation. All rights reserved."
   },
   "hero": {
     "kicker": "Cooperative-owned service network",
@@ -262,9 +276,43 @@
     "tomorrow": "Tomorrow",
     "weekend": "This Weekend"
   },
+  "stitchHome": {
+    "matchKicker": "Cooperative Matchmaker",
+    "matchTitle": "Let's Find Your Perfect Match",
+    "matchSubtitle": "Connecting verified local craftspeople with honest, upfront pricing. Zero commissions, protected floor wages.",
+    "bookIn60s": "Book in 60s",
+    "speakQuery": "Bol ke bataye",
+    "coopBadge": "100% Worker Owned",
+    "activeNearby": "Active Nearby Workers",
+    "liveRadar": "Live Tactical Radar",
+    "spotlightBadge": "Guild Spotlight",
+    "requestHelp": "Request Help"
+  },
+  "findHelp": {
+    "breadcrumb": "Verified Guild Directory",
+    "serviceType": "Service Type",
+    "locality": "Locality / Pincode",
+    "serviceWindow": "Service Window",
+    "filterBtn": "Filter Workers",
+    "allCrafts": "All Crafts & Trades",
+    "bookNow": "Book Now",
+    "floorStandard": "Floor Standard"
+  },
+  "registerWorker": {
+    "portalBadge": "Worker Membership Portal",
+    "title": "Join the Cooperative. Own Your Future.",
+    "subtitle": "Zero commission, guaranteed fair minimum wages, comprehensive medical coverage, and equal democratic voting rights for every verified tradesperson.",
+    "kycVerified": "Verified ✓ UIDAI e-Sign Ready",
+    "startKyc": "Start Live UIDAI e-KYC",
+    "reverify": "Re-verify Live Biometrics",
+    "replaceCard": "Replace Card",
+    "kycSuccess": "Aadhaar e-KYC Verified Successfully!",
+    "saveAndContinue": "Save & Continue"
+  },
   "common": {
     "loading": "Loading...",
     "error": "Something went wrong. Please try again.",
-    "close": "Close"
+    "close": "Close",
+    "logoLabel": "GigConnect Cooperative"
   }
 }

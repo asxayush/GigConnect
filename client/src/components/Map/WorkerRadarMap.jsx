@@ -1,4 +1,7 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState, useId } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
+import { showToast } from "../../toast";
 
 export default function WorkerRadarMap({
   workers = [],
@@ -6,189 +9,260 @@ export default function WorkerRadarMap({
   onSelectWorker = () => {},
   onNavigate = () => {},
 }) {
-  const [zoomLevel, setZoomLevel] = useState(1);
+  const mapContainerRef = useRef(null);
+  const mapInstanceRef = useRef(null);
+  const markersGroupRef = useRef(null);
+  const userMarkerRef = useRef(null);
+  const markersMapRef = useRef({});
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [currentLocation, setCurrentLocation] = useState("Indiranagar, Bengaluru");
+  const [currentLocation, setCurrentLocation] = useState("Delhi NCR Central");
   const [isLocating, setIsLocating] = useState(false);
 
-  const handleLocateMe = () => {
-    setIsLocating(true);
-    setTimeout(() => {
-      setIsLocating(false);
-      setCurrentLocation("Current GPS Location (Active)");
-    }, 600);
-  };
+  // Delhi NCR default center
+  const NCR_CENTER = [28.6139, 77.209]; // New Delhi
+  const DEFAULT_ZOOM = 11;
 
+  // Filter workers based on search query
   const filteredWorkers = workers.filter(
     (w) =>
       w.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       w.craft?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      w.role?.toLowerCase().includes(searchQuery.toLowerCase())
+      w.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.area?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  return (
-    <div className="relative w-full h-full min-h-[600px] lg:min-h-[680px] bg-[#002432] text-on-primary rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between border border-primary-container/30 select-none">
-      {/* Background Stylized Tactical Map Layer */}
-      <div
-        className="absolute inset-0 pointer-events-none transition-transform duration-300"
-        style={{ transform: `scale(${zoomLevel})` }}
-      >
-        <svg
-          className="w-full h-full opacity-30"
-          viewBox="0 0 800 800"
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          {/* Subtle street grid lines */}
-          <path
-            d="M 50,0 V 800 M 150,0 V 800 M 250,0 V 800 M 350,0 V 800 M 450,0 V 800 M 550,0 V 800 M 650,0 V 800 M 750,0 V 800"
-            stroke="#0e4d64"
-            strokeWidth="0.75"
-          />
-          <path
-            d="M 0,50 H 800 M 0,150 H 800 M 0,250 H 800 M 0,350 H 800 M 0,450 H 800 M 0,550 H 800 M 0,650 H 800 M 0,750 H 800"
-            stroke="#0e4d64"
-            strokeWidth="0.75"
-          />
+  // 1. Initialize Leaflet Map
+  useEffect(() => {
+    if (!mapContainerRef.current) return;
+    if (mapInstanceRef.current) return; // already initialized
 
-          {/* Curved arterial avenues */}
-          <path
-            d="M 0,220 Q 280,180 400,320 T 800,420"
-            stroke="#1c5d76"
-            strokeWidth="2.5"
-            strokeDasharray="4 4"
-          />
-          <path
-            d="M 120,0 Q 260,340 400,400 T 700,800"
-            stroke="#1c5d76"
-            strokeWidth="2.5"
-          />
-          <path
-            d="M 0,540 Q 320,500 480,360 T 800,200"
-            stroke="#287391"
-            strokeWidth="2"
-          />
-          <path
-            d="M 300,800 C 350,550 500,450 800,300"
-            stroke="#1c5d76"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M 50,750 Q 250,600 400,400 T 750,50"
-            stroke="#1c5d76"
-            strokeWidth="1"
-          />
+    // Create Map
+    const map = L.map(mapContainerRef.current, {
+      center: NCR_CENTER,
+      zoom: DEFAULT_ZOOM,
+      zoomControl: false, // We provide custom styled controls
+      attributionControl: true,
+      minZoom: 9,
+      maxZoom: 18,
+    });
 
-          {/* Road labels */}
-          <text x="440" y="240" fill="#89bdd8" fontSize="11" transform="rotate(-40 440,240)">
-            100 Feet Rd
-          </text>
-          <text x="350" y="440" fill="#89bdd8" fontSize="11" transform="rotate(85 350,440)">
-            Indiranagar Central
-          </text>
-          <text x="460" y="360" fill="#89bdd8" fontSize="10" transform="rotate(35 460,360)">
-            CMH Road
-          </text>
-          <text x="490" y="420" fill="#89bdd8" fontSize="9" transform="rotate(-15 490,420)">
-            HAL 2nd Stage
-          </text>
-          <text x="210" y="480" fill="#89bdd8" fontSize="9" transform="rotate(30 210,480)">
-            Koramangala Link
-          </text>
-        </svg>
+    // Standard OpenStreetMap tiles (100% free, open, no watermark or API key)
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      attribution:
+        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+      subdomains: ["a", "b", "c"],
+      maxZoom: 19,
+    }).addTo(map);
 
-        {/* Tactical Neighborhood Watermarks */}
-        <div className="absolute top-[28%] left-[44%] -translate-x-1/2 -translate-y-1/2 text-primary-fixed/60 font-bold tracking-wide text-xs uppercase select-none pointer-events-none">
-          Bengaluru Urban Ward
-        </div>
-        <div className="absolute top-[68%] left-[45%] text-primary-fixed-dim/50 font-semibold tracking-wider text-[11px] uppercase pointer-events-none">
-          Cooperative District 04
-        </div>
+    // Feature group for worker markers
+    const markersGroup = L.featureGroup().addTo(map);
+    markersGroupRef.current = markersGroup;
+    mapInstanceRef.current = map;
 
-        {/* Radar Concentric Rings with Palette-calibrated Secondary Tangerine Glow */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none">
-          {/* Outermost Radar Ring */}
-          <div className="w-[480px] h-[480px] rounded-full border border-secondary-container/20 animate-[spin_24s_linear_infinite]" />
-          
-          {/* Mid Radar Ring with Sector Shade */}
-          <div className="absolute inset-0 m-auto w-[340px] h-[340px] rounded-full border border-secondary-container/30 bg-secondary-container/[0.03] shadow-[0_0_80px_rgba(253,101,30,0.12)]" />
-          
-          {/* Inner Kinetic Sweep Layer */}
-          <div className="absolute inset-0 m-auto w-[220px] h-[220px] rounded-full border border-secondary-container/50 bg-gradient-to-tr from-secondary-container/15 via-transparent to-transparent animate-pulse" />
+    // Handle popup click delegation for "Hire Now" button
+    const handlePopupClick = (e) => {
+      const hireBtn = e.target.closest(".popup-hire-btn");
+      if (hireBtn) {
+        const workerId = hireBtn.getAttribute("data-worker-id");
+        const worker = workers.find((w) => w.id === workerId);
+        if (worker) {
+          onNavigate("booking", {
+            name: worker.name,
+            skills: [worker.role],
+            price: worker.rate,
+            prefilledDate: "Tomorrow, 09:30 AM",
+          });
+        }
+      }
+    };
 
-          {/* Center Point - User's Live GPS Pinpoint */}
-          <div className="absolute inset-0 m-auto w-4 h-4 bg-white rounded-full ring-4 ring-secondary-container/60 shadow-[0_0_16px_#fd651e] z-10 flex items-center justify-center">
-            <div className="w-1.5 h-1.5 bg-secondary-container rounded-full" />
+    mapContainerRef.current.addEventListener("click", handlePopupClick);
+
+    // Resize observer to ensure map renders smoothly on container layout changes
+    const resizeObserver = new ResizeObserver(() => {
+      if (mapInstanceRef.current) {
+        mapInstanceRef.current.invalidateSize();
+      }
+    });
+    resizeObserver.observe(mapContainerRef.current);
+
+    return () => {
+      resizeObserver.disconnect();
+      if (mapContainerRef.current) {
+        mapContainerRef.current.removeEventListener("click", handlePopupClick);
+      }
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, []);
+
+  // 2. Plot & Update Worker Markers
+  useEffect(() => {
+    const map = mapInstanceRef.current;
+    const markersGroup = markersGroupRef.current;
+    if (!map || !markersGroup) return;
+
+    markersGroup.clearLayers();
+    markersMapRef.current = {};
+
+    filteredWorkers.forEach((worker) => {
+      if (worker.lat == null || worker.lng == null) return;
+
+      const isSelected = selectedWorker?.id === worker.id;
+
+      // Custom DivIcon for the worker pin
+      const customIcon = L.divIcon({
+        className: "custom-leaflet-marker",
+        iconSize: [44, 44],
+        iconAnchor: [22, 22],
+        popupAnchor: [0, -20],
+        html: `
+          <div class="worker-marker-pin ${isSelected ? "is-active" : ""}">
+            <div class="worker-marker-pulse"></div>
+            <div class="worker-marker-img-wrap">
+              <img src="${worker.image}" alt="${worker.name}" class="worker-marker-img" />
+            </div>
+            <div class="worker-marker-badge">${worker.mapRate || worker.rate || "₹500"}</div>
           </div>
-        </div>
+        `,
+      });
 
-        {/* Worker Pins Placed Around Radar */}
-        {filteredWorkers.map((worker) => {
-          const isSelected = selectedWorker?.id === worker.id;
-          return (
-            <div
-              key={worker.id}
-              onClick={() => onSelectWorker(worker)}
-              style={{
-                top: `${worker.radarY}%`,
-                left: `${worker.radarX}%`,
-              }}
-              className={`absolute -translate-x-1/2 -translate-y-1/2 z-20 pointer-events-auto cursor-pointer group transition-all duration-300 ${
-                isSelected ? "scale-125 z-30" : "hover:scale-115"
-              }`}
-            >
-              {/* Floating Worker Avatar Pin with Price Pill */}
-              <div className="relative flex items-center">
-                {/* Glow ring */}
-                <div
-                  className={`absolute -inset-1.5 rounded-full transition-all ${
-                    isSelected
-                      ? "bg-secondary-container/70 blur-sm animate-pulse"
-                      : "group-hover:bg-secondary-container/40 group-hover:blur-[2px]"
-                  }`}
-                />
+      const marker = L.marker([worker.lat, worker.lng], { icon: customIcon });
 
-                {/* Worker Avatar Image */}
-                <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-surface-container-lowest bg-primary-container shadow-lg">
-                  <img
-                    src={worker.image}
-                    alt={worker.name}
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                        worker.name
-                      )}&background=fd651e&color=ffffff`;
-                    }}
-                  />
-                </div>
-
-                {/* Secondary Container Price Pill Badge */}
-                <div
-                  className={`ml-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold shadow-md transition-all whitespace-nowrap ${
-                    isSelected
-                      ? "bg-secondary-container text-on-secondary shadow-secondary-container/50 scale-105"
-                      : "bg-secondary-container text-on-secondary group-hover:bg-secondary"
-                  }`}
-                >
-                  {worker.mapRate || worker.rate || "₹500"}
-                </div>
+      // Custom Popup HTML matching Stitch Card Tokens
+      const popupHtml = `
+        <div class="worker-map-popup-card">
+          <div class="popup-top">
+            <img src="${worker.image}" alt="${worker.name}" class="popup-avatar" />
+            <div class="popup-info">
+              <div class="popup-badge">
+                <span class="popup-badge-dot"></span>
+                <span>Verified Sahakari</span>
               </div>
-
-              {/* Tooltip on Hover */}
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex flex-col items-center bg-primary/95 backdrop-blur-md px-3 py-1.5 rounded-xl border border-primary-container text-center shadow-xl pointer-events-none whitespace-nowrap z-40">
-                <span className="text-xs font-bold text-on-primary">{worker.name}</span>
-                <span className="text-[10px] text-secondary-fixed font-semibold">{worker.role}</span>
-                <span className="text-[9px] text-primary-fixed-dim">★ {worker.rating} • {worker.distance || "1.8 km"}</span>
+              <h4 class="popup-name">${worker.name}</h4>
+              <p class="popup-role">${worker.role}</p>
+              <div class="popup-meta">
+                <span class="popup-rating">★ ${worker.rating}</span>
+                <span class="popup-dot">•</span>
+                <span class="popup-loc">${worker.area || worker.city}</span>
               </div>
             </div>
-          );
-        })}
-      </div>
+          </div>
+          <div class="popup-divider"></div>
+          <div class="popup-bottom">
+            <div>
+              <span class="popup-rate-label">Direct Member Rate</span>
+              <div class="popup-rate-val">${worker.rate} <span class="popup-rate-unit">${worker.rateUnit || "/day"}</span></div>
+            </div>
+            <button type="button" class="popup-hire-btn" data-worker-id="${worker.id}">
+              <span>Hire Now</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
+          </div>
+        </div>
+      `;
 
-      {/* Top Header Bar Overlay */}
-      <div className="relative z-30 p-4 sm:p-5 flex flex-wrap items-center justify-between gap-3">
-        {/* Left: Search input pill */}
-        <div className="relative flex-1 max-w-[220px] sm:max-w-[260px]">
+      marker.bindPopup(popupHtml, {
+        maxWidth: 280,
+        className: "custom-worker-leaflet-popup",
+      });
+
+      marker.on("click", () => {
+        onSelectWorker(worker);
+      });
+
+      marker.addTo(markersGroup);
+      markersMapRef.current[worker.id] = marker;
+    });
+  }, [filteredWorkers, selectedWorker]);
+
+  // 3. Pan to selected worker when selectedWorker changes
+  useEffect(() => {
+    if (!selectedWorker || !mapInstanceRef.current) return;
+    const marker = markersMapRef.current[selectedWorker.id];
+    if (marker && selectedWorker.lat && selectedWorker.lng) {
+      mapInstanceRef.current.flyTo([selectedWorker.lat, selectedWorker.lng], 13.5, {
+        duration: 1.0,
+      });
+      // Open popup after fly animation completes
+      setTimeout(() => {
+        marker.openPopup();
+      }, 500);
+    }
+  }, [selectedWorker]);
+
+  // 4. Custom Geolocation: Locate Me in NCR
+  const handleLocateMe = () => {
+    setIsLocating(true);
+    if (!navigator.geolocation) {
+      showToast("Geolocation is not supported by your browser");
+      setIsLocating(false);
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const { latitude, longitude } = position.coords;
+        setIsLocating(false);
+        setCurrentLocation("Live NCR Geolocation");
+
+        if (mapInstanceRef.current) {
+          // Add or move user location marker
+          if (userMarkerRef.current) {
+            userMarkerRef.current.setLatLng([latitude, longitude]);
+          } else {
+            const userIcon = L.divIcon({
+              className: "custom-user-marker",
+              iconSize: [28, 28],
+              iconAnchor: [14, 14],
+              html: `
+                <div class="user-location-pin">
+                  <div class="user-pulse"></div>
+                  <div class="user-dot"></div>
+                </div>
+              `,
+            });
+            userMarkerRef.current = L.marker([latitude, longitude], {
+              icon: userIcon,
+              zIndexOffset: 1000,
+            })
+              .bindPopup("<div class='user-popup-content'><strong>You are here</strong><br/>Scanning Delhi NCR hub...</div>")
+              .addTo(mapInstanceRef.current);
+          }
+
+          mapInstanceRef.current.flyTo([latitude, longitude], 13.5, { duration: 1.4 });
+          showToast("Centered on your current location");
+        }
+      },
+      (error) => {
+        setIsLocating(false);
+        // Fallback gracefully to central Delhi NCR with clear notification
+        showToast("GPS access denied. Defaulting to Delhi Central Hub.");
+        if (mapInstanceRef.current) {
+          mapInstanceRef.current.flyTo(NCR_CENTER, DEFAULT_ZOOM, { duration: 1.2 });
+        }
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
+
+  // Reset to full Delhi NCR overview
+  const handleResetNCR = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.flyTo(NCR_CENTER, DEFAULT_ZOOM, { duration: 1 });
+      setCurrentLocation("Delhi NCR Central");
+      showToast("View reset to Delhi NCR region");
+    }
+  };
+
+  return (
+    <div className="relative w-full h-full min-h-[460px] sm:min-h-[540px] lg:min-h-[640px] bg-[#002432] text-on-primary rounded-3xl overflow-hidden shadow-2xl flex flex-col justify-between border border-primary-container/30 select-none">
+      {/* 1. TOP HEADER OVERLAY */}
+      <div className="relative z-[400] p-3 sm:p-5 flex flex-wrap items-center justify-between gap-2.5 bg-gradient-to-b from-[#002432]/95 via-[#002432]/60 to-transparent pointer-events-none">
+        {/* Search Worker / Skill Input */}
+        <div className="relative flex-1 min-w-[200px] max-w-[280px] pointer-events-auto">
           <span className="material-symbols-outlined absolute left-3.5 top-1/2 -translate-y-1/2 text-on-primary-container text-[18px]">
             search
           </span>
@@ -197,98 +271,85 @@ export default function WorkerRadarMap({
             placeholder="Search worker or skill..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-10 pl-10 pr-3 bg-white/10 hover:bg-white/15 focus:bg-white/20 backdrop-blur-xl border border-white/20 rounded-full text-xs font-medium text-white placeholder:text-on-primary-container focus:outline-none focus:ring-2 focus:ring-secondary-container transition-all"
+            className="w-full h-9 sm:h-10 pl-10 pr-3 bg-white/10 hover:bg-white/15 focus:bg-white/20 backdrop-blur-xl border border-white/20 rounded-full text-xs font-medium text-white placeholder:text-on-primary-container/80 focus:outline-none focus:ring-2 focus:ring-secondary-container transition-all"
           />
         </div>
 
-        {/* Center: Location Filter Pill */}
-        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl border border-white/20 px-3 py-1.5 rounded-full text-xs font-medium text-white shadow-sm">
-          <div className="w-6 h-6 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center">
-            <span className="material-symbols-outlined text-[14px]">tune</span>
+        {/* Center / Right: Location Badge */}
+        <div className="flex items-center gap-2 bg-white/10 backdrop-blur-xl border border-white/20 px-3 py-1.5 rounded-full text-xs font-medium text-white shadow-sm pointer-events-auto">
+          <div className="w-5 h-5 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center">
+            <span className="material-symbols-outlined text-[13px]">location_on</span>
           </div>
           <div className="flex flex-col leading-tight pr-1">
-            <span className="text-[9px] text-primary-fixed uppercase font-semibold">Location</span>
-            <span className="text-xs font-bold text-white max-w-[120px] sm:max-w-[180px] truncate">
+            <span className="text-[9px] text-primary-fixed uppercase font-semibold">Active Region</span>
+            <span className="text-[11px] sm:text-xs font-bold text-white max-w-[130px] sm:max-w-[170px] truncate">
               {currentLocation}
             </span>
           </div>
         </div>
 
-        {/* Right: Quick Actions */}
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => alert("No new notifications")}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white transition-all relative border-none cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">notifications</span>
-            <span className="absolute top-2 right-2 w-2 h-2 bg-secondary-container rounded-full ring-2 ring-[#002432]" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onNavigate("find-help")}
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 flex items-center justify-center text-white transition-all border-none cursor-pointer"
-          >
-            <span className="material-symbols-outlined text-[18px]">settings</span>
-          </button>
-          <div
-            className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-secondary-container cursor-pointer"
-            onClick={() => onNavigate("auth")}
-          >
-            <img
-              src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-              alt="Profile"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        </div>
+        {/* Quick Hub Reset Button */}
+        <button
+          type="button"
+          onClick={handleResetNCR}
+          className="pointer-events-auto px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 backdrop-blur-xl border border-white/20 text-white text-[11px] font-semibold flex items-center gap-1 transition-all border-none cursor-pointer"
+          title="Reset to Delhi NCR view"
+        >
+          <span className="material-symbols-outlined text-[14px]">my_location</span>
+          <span className="hidden sm:inline">NCR Hub</span>
+        </button>
       </div>
 
-      {/* Map Interactive Float Controls (Left: Zoom +/- | Right: GPS / Fullscreen) */}
-      <div className="relative z-30 px-5 flex items-center justify-between pointer-events-none">
+      {/* 2. LEAFLET INTERACTIVE MAP CANVAS */}
+      <div className="absolute inset-0 z-0">
+        <div ref={mapContainerRef} className="w-full h-full" />
+      </div>
+
+      {/* 3. FLOATING MAP CONTROLS (Zoom +/- & Locate Me) */}
+      <div className="relative z-[400] px-4 sm:px-5 flex items-center justify-between pointer-events-none my-auto">
         {/* Zoom Controls */}
         <div className="flex flex-col gap-2 pointer-events-auto">
           <button
             type="button"
-            onClick={() => setZoomLevel((z) => Math.min(z + 0.15, 1.4))}
-            className="w-9 h-9 rounded-full bg-primary/80 hover:bg-primary backdrop-blur-xl border border-primary-container text-white flex items-center justify-center font-bold text-lg shadow-lg active:scale-95 transition-all border-none cursor-pointer"
+            onClick={() => mapInstanceRef.current?.zoomIn()}
+            className="w-9 h-9 rounded-full bg-[#003548]/90 hover:bg-[#003548] backdrop-blur-xl border border-white/20 text-white flex items-center justify-center font-bold text-lg shadow-lg active:scale-95 transition-all border-none cursor-pointer"
+            title="Zoom In"
           >
             +
           </button>
           <button
             type="button"
-            onClick={() => setZoomLevel((z) => Math.max(z - 0.15, 0.75))}
-            className="w-9 h-9 rounded-full bg-primary/80 hover:bg-primary backdrop-blur-xl border border-primary-container text-white flex items-center justify-center font-bold text-lg shadow-lg active:scale-95 transition-all border-none cursor-pointer"
+            onClick={() => mapInstanceRef.current?.zoomOut()}
+            className="w-9 h-9 rounded-full bg-[#003548]/90 hover:bg-[#003548] backdrop-blur-xl border border-white/20 text-white flex items-center justify-center font-bold text-lg shadow-lg active:scale-95 transition-all border-none cursor-pointer"
+            title="Zoom Out"
           >
             −
           </button>
         </div>
 
-        {/* Locate & Fullscreen Controls */}
+        {/* Locate Me Button (Geolocation) */}
         <div className="flex flex-col gap-2 pointer-events-auto">
           <button
             type="button"
-            onClick={() => onNavigate("find-help")}
-            className="w-9 h-9 rounded-full bg-primary/80 hover:bg-primary backdrop-blur-xl border border-primary-container text-white flex items-center justify-center shadow-lg active:scale-95 transition-all border-none cursor-pointer"
-            title="Expand Full Grid"
-          >
-            <span className="material-symbols-outlined text-[18px]">fullscreen</span>
-          </button>
-          <button
-            type="button"
             onClick={handleLocateMe}
-            className={`w-9 h-9 rounded-full bg-secondary-container hover:bg-secondary text-on-secondary flex items-center justify-center shadow-lg shadow-secondary-container/30 active:scale-95 transition-all border-none cursor-pointer ${
+            className={`w-9 h-9 rounded-full bg-secondary-container hover:bg-secondary text-on-secondary flex items-center justify-center shadow-lg shadow-secondary-container/35 active:scale-95 transition-all border-none cursor-pointer ${
               isLocating ? "animate-spin" : ""
             }`}
-            title="Center on my location"
+            title="Locate me within Delhi NCR"
           >
             <span className="material-symbols-outlined text-[18px]">near_me</span>
           </button>
         </div>
       </div>
 
-      {/* Bottom Horizontal Worker Cards Carousel Overlay */}
-      <div className="relative z-30 p-4 sm:p-5">
+      {/* 4. BOTTOM HORIZONTAL-SCROLL WORKER CARDS STRIP */}
+      <div className="relative z-[400] p-3 sm:p-5 bg-gradient-to-t from-[#002432]/95 via-[#002432]/70 to-transparent">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-[11px] font-bold text-white/90 uppercase tracking-wider">
+            {filteredWorkers.length} Workers Plotted in NCR
+          </span>
+          <span className="text-[10px] text-white/60">Click card to pan map</span>
+        </div>
         <div className="flex items-center gap-3 overflow-x-auto pb-1.5 scrollbar-none snap-x">
           {filteredWorkers.map((worker) => {
             const isSelected = selectedWorker?.id === worker.id;
@@ -296,7 +357,7 @@ export default function WorkerRadarMap({
               <div
                 key={worker.id}
                 onClick={() => onSelectWorker(worker)}
-                className={`flex-shrink-0 w-[240px] p-3 rounded-2xl transition-all cursor-pointer snap-start border ${
+                className={`flex-shrink-0 w-[230px] sm:w-[250px] p-3 rounded-2xl transition-all cursor-pointer snap-start border ${
                   isSelected
                     ? "bg-surface-container-lowest text-on-surface shadow-xl ring-2 ring-secondary-container border-transparent scale-[1.02]"
                     : "bg-surface-container-lowest/95 text-on-surface hover:bg-surface-container-lowest border-surface-container-high shadow-md hover:scale-[1.01]"
@@ -323,9 +384,10 @@ export default function WorkerRadarMap({
                   </span>
                 </div>
 
-                {/* Subtitle & Location */}
-                <div className="text-[10px] text-on-surface-variant font-medium mb-2 truncate">
-                  {worker.city || "Bengaluru, India"} • {worker.distance || "1.8 km"}
+                {/* Subtitle & Area in Delhi NCR */}
+                <div className="text-[10px] text-on-surface-variant font-medium mb-2 truncate flex items-center gap-1">
+                  <span className="material-symbols-outlined text-[12px] text-secondary">place</span>
+                  <span>{worker.area || worker.city}</span>
                 </div>
 
                 {/* Status Badges */}
@@ -337,7 +399,7 @@ export default function WorkerRadarMap({
                     {worker.jobNature || "Full Time"}
                   </span>
                   <span className="px-2 py-0.5 bg-surface-container text-on-surface-variant rounded-md text-[10px] font-semibold">
-                    {worker.experience || "3 years"}
+                    ★ {worker.rating}
                   </span>
                 </div>
               </div>

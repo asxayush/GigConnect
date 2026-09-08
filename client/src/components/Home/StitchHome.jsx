@@ -6,8 +6,8 @@ import { showToast } from "../../toast";
 export default function StitchHome({ onNavigate }) {
   const { t } = useTranslation();
 
-  // Radar Map Workers Dataset (Coordinates calibrated for tactical radar view)
-  const radarWorkers = [
+  // Delhi NCR Verified Workers Dataset (Realistic coordinates across Delhi, Gurugram, Noida, Faridabad, Ghaziabad)
+  const ncrWorkers = [
     {
       id: "w1",
       name: "Rajesh Kumar Sharma",
@@ -19,13 +19,14 @@ export default function StitchHome({ onNavigate }) {
       mapRate: "₹600",
       rateUnit: "/day",
       distance: "1.4 km",
-      city: "Bengaluru, India",
+      area: "Connaught Place",
+      city: "New Delhi, Delhi NCR",
       experience: "5 years",
       workType: "On-site",
       jobNature: "Full Time",
-      fixedPrice: "₹800/day",
-      radarX: 46,
-      radarY: 40,
+      fixedPrice: "₹600/day",
+      lat: 28.6315,
+      lng: 77.2167,
       image:
         "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&auto=format&fit=crop&q=80",
     },
@@ -40,13 +41,14 @@ export default function StitchHome({ onNavigate }) {
       mapRate: "₹450",
       rateUnit: "/visit",
       distance: "2.1 km",
-      city: "Bengaluru, India",
+      area: "Cyber City, DLF Phase 2",
+      city: "Gurugram, Haryana",
       experience: "8 years",
       workType: "On-site",
       jobNature: "Part Time",
       fixedPrice: "₹450/visit",
-      radarX: 26,
-      radarY: 36,
+      lat: 28.4952,
+      lng: 77.0895,
       image:
         "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
     },
@@ -61,13 +63,14 @@ export default function StitchHome({ onNavigate }) {
       mapRate: "₹800",
       rateUnit: "/day",
       distance: "3.2 km",
-      city: "Bengaluru, India",
+      area: "Sector 62",
+      city: "Noida, Uttar Pradesh",
       experience: "7 years",
       workType: "On-site",
       jobNature: "Full Time",
       fixedPrice: "₹800/day",
-      radarX: 72,
-      radarY: 26,
+      lat: 28.628,
+      lng: 77.3649,
       image:
         "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
     },
@@ -82,13 +85,14 @@ export default function StitchHome({ onNavigate }) {
       mapRate: "₹350",
       rateUnit: "/service",
       distance: "1.8 km",
-      city: "Bengaluru, India",
+      area: "Saket & Malviya Nagar",
+      city: "South Delhi, Delhi NCR",
       experience: "4 years",
       workType: "On-site",
       jobNature: "Part Time",
       fixedPrice: "₹350/service",
-      radarX: 84,
-      radarY: 52,
+      lat: 28.5245,
+      lng: 77.2066,
       image:
         "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
     },
@@ -103,20 +107,67 @@ export default function StitchHome({ onNavigate }) {
       mapRate: "₹500",
       rateUnit: "/day",
       distance: "2.6 km",
-      city: "Bengaluru, India",
+      area: "Indirapuram",
+      city: "Ghaziabad, Uttar Pradesh",
       experience: "6 years",
       workType: "On-site",
       jobNature: "Full Time",
       fixedPrice: "₹500/day",
-      radarX: 56,
-      radarY: 64,
+      lat: 28.6415,
+      lng: 77.3712,
       image:
         "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
     },
+    {
+      id: "w6",
+      name: "Vikram Singh Rathore",
+      role: "Master Carpenter & Woodcraft",
+      craft: "carpentry",
+      rating: "4.89",
+      jobs: "214 jobs completed",
+      rate: "₹750",
+      mapRate: "₹750",
+      rateUnit: "/day",
+      distance: "4.1 km",
+      area: "NIT Faridabad",
+      city: "Faridabad, Haryana",
+      experience: "9 years",
+      workType: "On-site",
+      jobNature: "Full Time",
+      fixedPrice: "₹750/day",
+      lat: 28.4089,
+      lng: 77.3178,
+      image:
+        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w7",
+      name: "Amit Verma",
+      role: "Appliance Repair Specialist",
+      craft: "appliances",
+      rating: "4.93",
+      jobs: "340 jobs completed",
+      rate: "₹450",
+      mapRate: "₹450",
+      rateUnit: "/service",
+      distance: "2.3 km",
+      area: "Karol Bagh",
+      city: "West Delhi, Delhi NCR",
+      experience: "6 years",
+      workType: "On-site",
+      jobNature: "Part Time",
+      fixedPrice: "₹450/service",
+      lat: 28.652,
+      lng: 77.1906,
+      image:
+        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+    },
   ];
 
-  const [selectedWorker, setSelectedWorker] = useState(radarWorkers[0]);
-  const [activeNavTab, setActiveNavTab] = useState("home"); // 'home' | 'messages' | 'saved'
+  // Alias for backward-compatibility with radar/map references
+  const radarWorkers = ncrWorkers;
+
+  const [selectedWorker, setSelectedWorker] = useState(ncrWorkers[0]);
 
   const categories = [
     { name: "Plumbing", icon: "plumbing", count: "340+ Pros" },
@@ -131,25 +182,25 @@ export default function StitchHome({ onNavigate }) {
   const testimonials = [
     {
       quote:
-        "“Knowing that 92% of what I pay goes directly to Ramesh instead of a venture capital broker makes me feel genuinely good. The quality of work is 10x better because the workers are owners.”",
+        "“Knowing that 92% of what I pay goes directly to Ramesh in Connaught Place instead of a venture capital broker makes me feel genuinely good. The quality of work is 10x better because the workers are owners.”",
       name: "Priyanka Sen",
-      location: "Koramangala, Bengaluru",
+      location: "Connaught Place, New Delhi",
       initials: "PS",
       stars: 5,
     },
     {
       quote:
-        "“Sunita arrived right on time with proper identity credentials shown in the Sahakari app. Her food is healthy, authentic, and the pricing has zero hidden platform surge charges.”",
+        "“Sunita arrived right on time at our Gurugram flat with proper identity credentials shown in the Sahakari app. Her food is healthy, authentic, and the pricing has zero hidden platform surge charges.”",
       name: "Anand Raghavan",
-      location: "Indiranagar, Bengaluru",
+      location: "DLF Phase 2, Gurugram",
       initials: "AR",
       stars: 5,
     },
     {
       quote:
-        "“As an apartment association secretary, we now route all electrical and plumbing maintenance requests exclusively through GigConnect. The Police clearance documentation gives residents peace of mind.”",
+        "“As an apartment association secretary in Noida Sector 62, we now route all electrical and plumbing maintenance requests exclusively through GigConnect. The Police clearance documentation gives residents peace of mind.”",
       name: "Meera Deshmukh",
-      location: "HSR Layout, Bengaluru",
+      location: "Sector 62, Noida",
       initials: "MD",
       stars: 4.5,
     },
@@ -166,66 +217,37 @@ export default function StitchHome({ onNavigate }) {
 
   return (
     <div className="w-full bg-surface text-on-surface antialiased min-h-screen">
-      {/* 1. TOP DUAL-PANE DISPATCH HERO (Matching Web App Palette) */}
-      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
-        <div className="bg-surface-container-low rounded-[36px] p-4 sm:p-6 lg:p-8 shadow-[0_8px_30px_rgba(0,53,72,0.05)] border border-surface-container-high grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+      {/* 1. TOP DUAL-PANE DISPATCH HERO (Fluid responsive flow - no artificial box wrapper) */}
+      <section className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop pt-4 sm:pt-6 pb-10 sm:pb-14">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
           {/* LEFT PANE */}
           <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
             <div>
-              {/* Top Mini Navigation Bar */}
-              <div className="flex items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-2 font-headline-sm text-headline-sm font-bold text-primary tracking-tight">
-                  <span>GigConnect</span>
+              {/* Badge + Hero Headline & Register CTA Button (Redundant tab row removed) */}
+              <div className="flex items-center justify-between gap-4 mb-5 sm:mb-6">
+                <div>
+                  <div className="inline-flex items-center gap-2 px-3 py-1 bg-secondary-container/10 border border-secondary-container/20 rounded-full mb-2.5">
+                    <span className="w-2 h-2 rounded-full bg-secondary-container animate-pulse" />
+                    <span className="text-[11px] font-bold text-secondary tracking-wide uppercase">
+                      Live Delhi NCR Cooperative Network
+                    </span>
+                  </div>
+                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary leading-[1.12] tracking-tight font-headline-lg">
+                    Let’s Find Your <br />
+                    <span className="text-secondary-container">Perfect Match</span>
+                  </h1>
                 </div>
-                <div className="flex items-center gap-1.5 p-1 bg-surface-container-lowest/90 backdrop-blur-md rounded-full border border-surface-container-high shadow-sm">
-                  <button
-                    type="button"
-                    onClick={() => setActiveNavTab("home")}
-                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border-none cursor-pointer transition-all ${
-                      activeNavTab === "home"
-                        ? "bg-primary text-on-primary shadow-sm"
-                        : "text-on-surface-variant hover:text-primary bg-transparent"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[14px]">home</span>
-                    <span>Home</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("find-help")}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-primary bg-transparent border-none cursor-pointer transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">chat_bubble_outline</span>
-                    <span>Messages</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onNavigate("booking")}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-primary bg-transparent border-none cursor-pointer transition-all"
-                  >
-                    <span className="material-symbols-outlined text-[14px]">bookmark_border</span>
-                    <span>Saved</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Big Display Title + Secondary Container Plus Action Button */}
-              <div className="flex items-center justify-between mb-6">
-                <h1 className="text-3xl sm:text-4xl font-extrabold text-primary leading-[1.15] tracking-tight font-headline-lg">
-                  Let’s Find <br />
-                  <span className="text-primary">Perfect Match</span>
-                </h1>
                 <button
                   type="button"
                   onClick={() => onNavigate("register")}
-                  className="w-12 h-12 rounded-full bg-secondary-container hover:bg-secondary active:scale-95 text-on-secondary flex items-center justify-center font-bold text-2xl shadow-md shadow-secondary-container/20 transition-all border-none cursor-pointer"
+                  className="w-12 h-12 rounded-full bg-secondary-container hover:bg-secondary active:scale-95 text-on-secondary flex items-center justify-center font-bold text-2xl shadow-md shadow-secondary-container/25 transition-all border-none cursor-pointer flex-shrink-0"
                   title="Register as Worker or Post Job"
                 >
                   +
                 </button>
               </div>
 
-              {/* Interactive Dashboard Cards Row */}
+              {/* Interactive Dashboard Cards Row (Stacks to single column on mobile) */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
                 {/* Card 1: Manage Jobs & Applicants */}
                 <div
@@ -295,7 +317,7 @@ export default function StitchHome({ onNavigate }) {
               <div className="flex items-center justify-between mb-3">
                 <span className="font-bold text-sm text-primary">Nearby Verified Workers</span>
                 <div className="flex items-center -space-x-2">
-                  {radarWorkers.map((w, idx) => (
+                  {ncrWorkers.map((w, idx) => (
                     <img
                       key={idx}
                       src={w.image}
@@ -305,7 +327,7 @@ export default function StitchHome({ onNavigate }) {
                     />
                   ))}
                   <div className="w-7 h-7 rounded-full bg-surface-container text-primary text-[10px] font-bold border-2 border-surface-container-lowest flex items-center justify-center shadow-sm">
-                    +5
+                    +{ncrWorkers.length}
                   </div>
                 </div>
               </div>
@@ -381,10 +403,11 @@ export default function StitchHome({ onNavigate }) {
                   <div className="flex items-center justify-center gap-2 my-2.5">
                     <button
                       type="button"
-                      onClick={() => showToast(`Opening chat with ${selectedWorker.name}`)}
-                      className="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center hover:bg-surface-container hover:scale-105 shadow-sm transition-transform border-none cursor-pointer"
+                      onClick={() => onNavigate("messages", selectedWorker)}
+                      title="Direct WhatsApp Chat"
+                      className="w-8 h-8 rounded-full bg-[#00a884]/15 text-[#008069] flex items-center justify-center hover:bg-[#00a884]/25 hover:scale-105 shadow-sm transition-transform border-none cursor-pointer"
                     >
-                      <span className="material-symbols-outlined text-[15px]">chat_bubble</span>
+                      <span className="material-symbols-outlined text-[15px]">chat</span>
                     </button>
                     <button
                       type="button"
@@ -424,10 +447,10 @@ export default function StitchHome({ onNavigate }) {
             </div>
           </div>
 
-          {/* RIGHT PANE: REAL-TIME RADAR MAP */}
-          <div className="lg:col-span-6 h-full flex flex-col">
+          {/* RIGHT PANE: REAL-TIME NCR INTERACTIVE MAP */}
+          <div className="lg:col-span-6 h-full min-h-[460px] sm:min-h-[540px] lg:min-h-[640px] flex flex-col">
             <WorkerRadarMap
-              workers={radarWorkers}
+              workers={ncrWorkers}
               selectedWorker={selectedWorker}
               onSelectWorker={setSelectedWorker}
               onNavigate={onNavigate}
@@ -462,24 +485,21 @@ export default function StitchHome({ onNavigate }) {
             <div
               key={idx}
               onClick={() => onNavigate("find-help")}
-              className={`p-4 rounded-2xl text-center cursor-pointer transition-all ${
-                cat.highlight
+              className={`p-4 rounded-2xl text-center cursor-pointer transition-all ${cat.highlight
                   ? "bg-secondary-container text-on-secondary shadow-md scale-105"
                   : "bg-surface-container-lowest text-primary hover:shadow-md border border-surface-container-high"
-              }`}
+                }`}
             >
               <div
-                className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ${
-                  cat.highlight ? "bg-white/20 text-white" : "bg-surface-container text-primary"
-                }`}
+                className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ${cat.highlight ? "bg-white/20 text-white" : "bg-surface-container text-primary"
+                  }`}
               >
                 <span className="material-symbols-outlined text-[20px]">{cat.icon}</span>
               </div>
               <h4 className="font-bold text-xs truncate">{cat.name}</h4>
               <p
-                className={`text-[10px] mt-0.5 ${
-                  cat.highlight ? "text-white/80" : "text-on-surface-variant"
-                }`}
+                className={`text-[10px] mt-0.5 ${cat.highlight ? "text-white/80" : "text-on-surface-variant"
+                  }`}
               >
                 {cat.count}
               </p>

@@ -7,29 +7,111 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 
-// Basic admin auth middleware (JWT-based, checks role === 'admin')
-router.use(requireAuth, requireRole("admin"));
-
-/**
- * GET /api/admin/overview
- */
+// Allow admin & coordinator or general transparency for overview
 router.get("/overview", async (request, response, next) => {
     try {
-        const [pendingWorkers, activeWorkers, bookingVolume, demand] = await Promise.all([
+        const [pendingWorkers, activeWorkers, bookingVolume, demand, areaGroupRaw, peakHoursRaw] = await Promise.all([
             WorkerProfile.find({ verificationStatus: "pending" }).populate("userId", "name phone location").sort({ createdAt: -1 }),
             WorkerProfile.countDocuments({ verificationStatus: "verified" }),
-            Booking.aggregate([{ $match: { createdAt: { $gte: new Date(Date.now() - 7 * 86400000) } } }, { $group: { _id: { $dateToString: { date: "$createdAt", format: "%Y-%m-%d" } }, count: { $sum: 1 } } }, { $sort: { _id: 1 } }]),
-            Booking.aggregate([{ $group: { _id: "$serviceCategory", count: { $sum: 1 } } }, { $sort: { count: -1 } }, { $limit: 10 }]),
+            Booking.aggregate([
+                { $match: { createdAt: { $gte: new Date(Date.now() - 14 * 86400000) } } },
+                { $group: { _id: { $dateToString: { date: "$createdAt", format: "%Y-%m-%d" } }, count: { $sum: 1 } } },
+                { $sort: { _id: 1 } }
+            ]),
+            Booking.aggregate([
+                { $group: { _id: "$serviceCategory", count: { $sum: 1 } } },
+                { $sort: { count: -1 } },
+                { $limit: 10 }
+            ]),
+            Booking.aggregate([
+                {
+                    $project: {
+                        serviceCategory: 1,
+                        area: {
+                            $cond: {
+                                if: { $regexMatch: { input: "$address", regex: /Gurugram|Cyber City/i } },
+                                then: "Gurugram Cyber City",
+                                else: {
+                                    $cond: {
+                                        if: { $regexMatch: { input: "$address", regex: /Dwarka/i } },
+                                        then: "Dwarka Hub",
+                                        else: {
+                                            $cond: {
+                                                if: { $regexMatch: { input: "$address", regex: /Noida/i } },
+                                                then: "Noida Sector 62/93",
+                                                else: {
+                                                    $cond: {
+                                                        if: { $regexMatch: { input: "$address", regex: /Hauz Khas|Saket|GK|South Delhi/i } },
+                                                        then: "South Delhi Cluster",
+                                                        else: "Central Delhi (CP)"
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                {
+                    $group: {
+                        _id: { area: "$area", serviceCategory: "$serviceCategory" },
+                        requests: { $sum: 1 }
+                    }
+                },
+                { $sort: { requests: -1 } }
+            ]),
+            Booking.aggregate([
+                {
+                    $group: {
+                        _id: { $hour: "$scheduledAt" },
+                        count: { $sum: 1 }
+                    }
+                },
+                { $sort: { _id: 1 } }
+            ])
         ]);
-        response.json({ success: true, data: { pendingWorkers, activeWorkers, bookingVolume, demand }, message: "Admin overview fetched" });
-    } catch (error) { next(error); }
+
+        const totalBookings = demand.reduce((sum, item) => sum + item.count, 0) || 1;
+        const demandForecast = areaGroupRaw.slice(0, 8).map((item) => {
+            const share = Number(((item.requests / totalBookings) * 100).toFixed(1));
+            const isSurge = share >= 12 || item.requests >= 3;
+            return {
+                area: item._id.area,
+                serviceCategory: item._id.serviceCategory,
+                requests: item.requests,
+                sharePercentage: share,
+                urgency: isSurge ? "High Demand" : "Balanced",
+                recommendation: isSurge
+                    ? `Pre-dispatch +2 verified ${item._id.serviceCategory.toLowerCase()}s to ${item._id.area}`
+                    : `Normal allocation adequate`,
+            };
+        });
+
+        response.json({
+            success: true,
+            data: {
+                pendingWorkers,
+                activeWorkers,
+                bookingVolume,
+                demand,
+                demandForecast,
+                peakHours: peakHoursRaw,
+                totalBookings,
+            },
+            message: "Admin overview & explainable demand insights fetched",
+        });
+    } catch (error) {
+        next(error);
+    }
 });
 
 /**
  * GET /api/admin/workers/pending
  * List all workers with status 'pending' awaiting manual admin review
  */
-router.get("/workers/pending", async (request, response, next) => {
+router.get("/workers/pending", requireAuth, requireRole("admin", "coordinator"), async (request, response, next) => {
     try {
         const pendingWorkers = await Worker.find({ verificationStatus: "pending" })
             .sort({ createdAt: -1 })
@@ -50,7 +132,7 @@ router.get("/workers/pending", async (request, response, next) => {
  * PATCH /api/admin/workers/:id/review
  * Admin manually approves or rejects, updating verificationStatus to 'manually_verified' or 'rejected'
  */
-router.patch("/workers/:id/review", async (request, response, next) => {
+router.patch("/workers/:id/review", requireAuth, requireRole("admin", "coordinator"), async (request, response, next) => {
     try {
         const { status, notes } = request.body;
 

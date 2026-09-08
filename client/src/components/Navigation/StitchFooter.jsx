@@ -1,7 +1,9 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import Logo from "../Logo/Logo";
 
 export default function StitchFooter({ onNavigate }) {
+  const { t } = useTranslation();
   return (
     <footer className="w-full bg-inverse-surface text-inverse-on-surface pt-space-12 pb-space-8 mt-auto">
       <div className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop">
@@ -9,7 +11,7 @@ export default function StitchFooter({ onNavigate }) {
           <div className="flex items-center gap-space-3">
             <Logo size={32} />
             <span className="font-headline-sm text-headline-sm text-inverse-on-surface font-bold">
-              GigConnect Cooperative
+              {t("footer.brand", "GigConnect Cooperative")}
             </span>
           </div>
           <div className="flex items-center gap-space-4">
@@ -28,74 +30,74 @@ export default function StitchFooter({ onNavigate }) {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-space-8 pb-space-12">
           {/* Col 1 */}
           <div className="flex flex-col gap-space-3">
-            <span className="font-title-md text-title-md text-inverse-on-surface font-semibold">Discover</span>
+            <span className="font-title-md text-title-md text-inverse-on-surface font-semibold">{t("footer.discover", "Discover")}</span>
             <button
               type="button"
               onClick={() => onNavigate("find-help")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Find Help
+              {t("nav.findHelp", "Find Help")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("find-help")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Services by City
+              {t("footer.servicesByCity", "Services by City")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("find-help")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              All Services
+              {t("footer.allServices", "All Services")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("register")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Register as Worker
+              {t("nav.registerWorker", "Register a Worker")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("find-help")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Cost Guides
+              {t("footer.costGuides", "Cost Guides")}
             </button>
           </div>
 
           {/* Col 2 */}
           <div className="flex flex-col gap-space-3">
-            <span className="font-title-md text-title-md text-inverse-on-surface font-semibold">Company</span>
+            <span className="font-title-md text-title-md text-inverse-on-surface font-semibold">{t("footer.company", "Company")}</span>
             <button
               type="button"
               onClick={() => onNavigate("admin")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              About Us
+              {t("footer.aboutUs", "About Us")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("admin")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Federation Desk
+              {t("nav.federationDesk", "Federation Desk")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("admin")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Cooperative Model
+              {t("footer.cooperativeModel", "Cooperative Model")}
             </button>
             <button
               type="button"
               onClick={() => onNavigate("admin")}
               className="text-left bg-transparent border-none p-0 font-body-md text-body-md text-inverse-on-surface/75 hover:text-inverse-on-surface transition-colors cursor-pointer"
             >
-              Careers
+              {t("footer.careers", "Careers")}
             </button>
             <button
               type="button"
@@ -106,38 +108,27 @@ export default function StitchFooter({ onNavigate }) {
             </button>
           </div>
 
-          {/* Col 3 */}
+          {/* Col 3: Cooperative Web Guarantee */}
           <div className="flex flex-col gap-space-4">
-            <span className="font-title-md text-title-md text-inverse-on-surface font-semibold">Download our app</span>
+            <span className="font-title-md text-title-md text-inverse-on-surface font-semibold">Web-First Cooperative Federation</span>
             <p className="font-body-sm text-body-sm text-inverse-on-surface/70 m-0">
-              Empowering domestic and household workers with democratic platform ownership and social security.
+              Access trusted cooperative household services instantly on any mobile or desktop browser. No app install required.
             </p>
-            <div className="flex flex-wrap gap-space-3">
-              <div className="flex items-center gap-space-2 px-space-3 py-space-2 bg-surface-container-lowest/10 rounded-xl hover:bg-surface-container-lowest/15 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-[24px]">install_mobile</span>
-                <div className="flex flex-col">
-                  <span className="font-label-sm text-label-sm text-inverse-on-surface/60 leading-none">Download on</span>
-                  <span className="font-label-md text-label-md text-inverse-on-surface font-bold leading-tight">Google Play</span>
-                </div>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center gap-2.5 text-xs text-inverse-on-surface/80 bg-surface-container-lowest/10 p-3 rounded-xl">
+                <span className="material-symbols-outlined text-[20px] text-green-400 flex-shrink-0">verified</span>
+                <span>100% Aadhaar &amp; Biometric Verified Guild Members</span>
               </div>
-              <div className="flex items-center gap-space-2 px-space-3 py-space-2 bg-surface-container-lowest/10 rounded-xl hover:bg-surface-container-lowest/15 cursor-pointer transition-colors">
-                <span className="material-symbols-outlined text-[24px]">phone_iphone</span>
-                <div className="flex flex-col">
-                  <span className="font-label-sm text-label-sm text-inverse-on-surface/60 leading-none">Download on</span>
-                  <span className="font-label-md text-label-md text-inverse-on-surface font-bold leading-tight">App Store</span>
-                </div>
+              <div className="flex items-center gap-2.5 text-xs text-inverse-on-surface/80 bg-surface-container-lowest/10 p-3 rounded-xl">
+                <span className="material-symbols-outlined text-[20px] text-amber-400 flex-shrink-0">savings</span>
+                <span>Direct UPI / Jan Dhan payouts — 0% unfair middleman cuts</span>
               </div>
             </div>
-            <div className="flex items-center gap-space-3 pt-space-2">
-              <div className="p-space-2 bg-surface-container-lowest rounded-lg flex items-center justify-center">
-                <span className="material-symbols-outlined text-primary text-[32px]">qr_code_2</span>
-              </div>
-              <div className="flex items-center gap-space-2 text-on-tertiary-container">
-                <span className="material-symbols-outlined text-[20px]">verified</span>
-                <span className="font-label-sm text-label-sm text-inverse-on-surface font-medium leading-snug">
-                  100% Aadhaar &amp; Cooperative Verified Guarantee
-                </span>
-              </div>
+            <div className="flex items-center gap-space-2 text-on-tertiary-container pt-1">
+              <span className="material-symbols-outlined text-[18px] text-tertiary-fixed-dim">support_agent</span>
+              <span className="font-label-sm text-label-sm text-inverse-on-surface/80">
+                24x7 Sahayata Helpline: 1800-GIG-COOP
+              </span>
             </div>
           </div>
         </div>

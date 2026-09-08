@@ -46,4 +46,5 @@ export const reviewWorker = (workerId, status, notes, token) => apiRequest(`/api
 export const submitRating = (data, token) => apiRequest("/api/ratings", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
 export const registerWorker = (data, token) => apiRequest("/api/workers", { method: "POST", body: data, headers: { Authorization: `Bearer ${token}` } });
 export const updateMyWorkerProfile = (data, token) => apiRequest("/api/workers/me", { method: "PATCH", body: data, headers: { Authorization: `Bearer ${token}` } });
+export const updateCustomerProfile = (data, token) => apiRequest("/api/auth/profile", { method: "PATCH", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
 export const createPaymentOrder = (bookingId, token) => apiRequest("/api/payments/orders", { method: "POST", body: JSON.stringify({ bookingId }), headers: { Authorization: `Bearer ${token}` } });
