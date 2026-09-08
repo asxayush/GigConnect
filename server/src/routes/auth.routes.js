@@ -20,7 +20,6 @@ router.post("/register", async (request, response, next) => {
         const existing = await User.findOne({ $or: identityChecks });
         if (existing) return response.status(409).json({ success: false, message: "An account already exists" });
         const user = await User.create({ name, email, phone, passwordHash: await bcrypt.hash(password, 10), role, location });
-        if (role === "worker") await WorkerProfile.create({ userId: user._id });
         return response.status(201).json({ success: true, data: { user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token: signToken(user) }, message: "Account created" });
     } catch (error) { return response.status(error.statusCode || 502).json({ success: false, message: error.message || "Unable to send OTP" }); }
 });
@@ -58,13 +57,13 @@ router.post("/phone/verify", async (request, response, next) => {
     try {
         const phone = request.body.phone?.replace(/[\s()-]/g, "");
         const code = request.body.code?.trim();
-        if (!/^\+[1-9]\d{7,14}$/.test(phone || "") || !/^\d{4,8}$/.test(code || "")) return response.status(400).json({ success: false, message: "Enter a valid phone number and OTP" });
+        if (!/^\+[1-9]\d{7,14}$/.test(phone || "") || !/^\d{6}$/.test(code || "")) return response.status(400).json({ success: false, message: "Enter the same phone number and the 6-digit OTP you received" });
         const verification = await checkPhoneVerification(phone, code);
         if (verification.status !== "approved") return response.status(401).json({ success: false, message: "Incorrect or expired OTP" });
         let user = await User.findOne({ phone });
         if (!user) user = await User.create({ phone, name: phone, role: "customer" });
         response.json({ success: true, data: { user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token: signToken(user) }, message: "Phone verified" });
-    } catch (error) { next(error); }
+    } catch (error) { return response.status(error.statusCode || 502).json({ success: false, message: error.message || "Unable to verify OTP" }); }
 });
 
 export default router;

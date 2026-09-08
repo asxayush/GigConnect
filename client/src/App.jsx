@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 import { AuthView, BookingView, DetailView, Home, RatingView, WorkerRegistration } from "./components/Home/Home"
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard"
+import WorkerVerification from "./components/WorkerVerification/WorkerVerification"
 import SignUp from "./components/SignUp/SignUp"
 import Toast from "./components/Toast/Toast"
 import { showToast } from "./toast"
@@ -31,11 +32,22 @@ function App() {
           <button className={view === "home" ? "active" : ""} onClick={() => navigate("home")}>Find help</button>
           <button className={view === "booking" || view === "detail" ? "active" : ""} onClick={() => navigate("booking")}>My bookings</button>
           <button className={view === "register" ? "active" : ""} onClick={() => navigate("register")}>Register a worker</button>
+          <button className={view === "verify" ? "active" : ""} onClick={() => navigate("verify")}>Aadhaar Verification</button>
           <button className={view === "admin" ? "active" : ""} onClick={() => navigate("admin")}>Federation desk</button>
         </nav>
         <button className="language-button" onClick={toggleLanguage}>{language === "en" ? "हिन्दी" : "English"}</button><button className="account-button" onClick={() => navigate("public-register")}>Join GigConnect</button>
       </header>
-      <main>{view === "home" && <Home language={language} onNavigate={navigate} />}{view === "booking" && <BookingView selectedWorker={selectedRecord} onNavigate={navigate} />}{view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} />}{view === "register" && <WorkerRegistration />}{view === "admin" && <AdminDashboard />}{view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}{view === "auth" && <AuthView onNavigate={navigate} />}{view === "public-register" && <SignUp onNavigate={navigate} />}</main>
+      <main>
+        {view === "home" && <Home language={language} onNavigate={navigate} />}
+        {view === "booking" && <BookingView selectedWorker={selectedRecord} onNavigate={navigate} />}
+        {view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} />}
+        {view === "register" && <WorkerRegistration onNavigate={navigate} />}
+        {view === "verify" && <WorkerVerification onVerificationComplete={() => navigate("home")} onCancel={() => navigate("home")} />}
+        {view === "admin" && <AdminDashboard />}
+        {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}
+        {view === "auth" && <AuthView onNavigate={navigate} />}
+        {view === "public-register" && <SignUp onNavigate={navigate} />}
+      </main>
       <footer className="site-footer"><span>GigConnect</span><span>Cooperative work. Neighbourhood trust.</span><span>Delhi NCR · 2026</span></footer>
     </div>
   )

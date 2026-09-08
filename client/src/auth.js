@@ -2,8 +2,6 @@ import { initializeApp } from "firebase/app";
 import {
     getAuth,
     GoogleAuthProvider,
-    RecaptchaVerifier,
-    signInWithPhoneNumber,
     signInWithPopup,
     getIdToken,
 } from "firebase/auth";
@@ -26,18 +24,3 @@ const googleProvider = new GoogleAuthProvider();
 export const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
 export const getFirebaseIdToken = (user) => getIdToken(user);
 
-export const createPhoneVerifier = (container) => new RecaptchaVerifier(auth, container, { size: "invisible" });
-
-export const sendPhoneOTP = (phoneNumber, verifier) => {
-    const normalizedPhone = phoneNumber?.replace(/[\s()-]/g, "");
-    if (!normalizedPhone || !/^\+[1-9]\d{7,14}$/.test(normalizedPhone)) {
-        throw new Error("Enter a phone number with country code, for example +919876543210");
-    }
-    return signInWithPhoneNumber(auth, normalizedPhone, verifier);
-};
-
-export const verifyPhoneOTP = (confirmationResult, otp) => {
-    if (!confirmationResult) throw new Error("Request an OTP first");
-    if (!/^\d{6}$/.test(otp?.trim())) throw new Error("Enter the 6-digit OTP");
-    return confirmationResult.confirm(otp.trim());
-};

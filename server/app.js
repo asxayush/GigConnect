@@ -6,6 +6,7 @@ import bookingRoutes from "./src/routes/booking.routes.js";
 import ratingRoutes from "./src/routes/rating.routes.js";
 import adminRoutes from "./src/routes/admin.routes.js";
 import paymentRoutes from "./src/routes/payment.routes.js";
+import workerVerificationRoutes from "./src/routes/workerVerification.routes.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -17,7 +18,8 @@ const PORT = process.env.PORT || 5000;
 const currentDirectory = path.dirname(fileURLToPath(import.meta.url));
 
 app.use(cors({ origin: process.env.CLIENT_URL || true }));
-app.use(express.json());
+app.use(express.json({ limit: "10mb" }));
+app.use(express.urlencoded({ extended: true, limit: "10mb" }));
 app.use("/uploads", express.static(path.join(currentDirectory, "uploads")));
 
 app.get("/", (req, res) => {
@@ -26,6 +28,7 @@ app.get("/", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/workers", workerRoutes);
+app.use("/api/worker", workerVerificationRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/ratings", ratingRoutes);
 app.use("/api/admin", adminRoutes);

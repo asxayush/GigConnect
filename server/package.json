@@ -1,9 +1,14 @@
 {
   "dependencies": {
+    "@napi-rs/canvas": "^1.0.8",
+    "@tensorflow/tfjs": "^4.22.0",
     "bcrypt": "^6.0.0",
+    "cloudinary": "^2.11.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
+    "face-api.js": "^0.22.2",
     "firebase": "^12.18.0",
     "firebase-admin": "^14.3.0",
     "jsonwebtoken": "^9.0.3",
@@ -12,6 +17,7 @@
     "nodemon": "^3.1.14",
     "nodmeon": "^0.0.1-security",
     "razorpay": "^2.9.8",
+    "tesseract.js": "^7.0.0",
     "twilio": "^6.1.0"
   },
   "name": "server",
@@ -20,7 +26,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon index.js",
-    "start": "node index.js"
+    "start": "node index.js",
+    "test:verification": "node test-verification.js"
   },
   "keywords": [],
   "author": "",

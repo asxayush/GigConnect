@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { getAdminOverview, updateWorkerVerification } from "../../api";
 
+import PendingVerifications from "./PendingVerifications";
+
 const reveal = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } };
 
 function AdminDashboard() {
@@ -41,6 +43,10 @@ function AdminDashboard() {
             <motion.div className="admin-panel demand-panel" initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.08 } } }}><div className="panel-heading"><h3>Demand insights</h3><span>Live aggregation</span></div>{!demand.length && <p className="empty-state">No booking demand data yet.</p>}{demand.map((item) => <motion.div className="demand-row" key={item._id} variants={reveal} transition={transition}><div><span>{item._id}</span><strong>{item.count} requests</strong></div><div className="demand-bar"><motion.i initial={{ width: 0 }} animate={{ width: `${(item.count / maxDemand) * 100}%` }} transition={reduceMotion ? { duration: 0 } : { duration: 0.8, ease: "easeOut" }} /></div></motion.div>)}</motion.div>
         </div>
         <motion.div className="admin-panel volume-panel" initial="hidden" animate="visible" variants={reveal} transition={transition}><div className="panel-heading"><h3>Booking volume</h3><span>Last 7 days</span></div>{!bookingVolume.length && <p className="empty-state">No booking volume data yet.</p>}<div className="volume-chart">{bookingVolume.map((item) => <div className="volume-column" key={item._id}><motion.i initial={{ height: 0 }} animate={{ height: `${(item.count / maxBookings) * 100}%` }} transition={reduceMotion ? { duration: 0 } : { duration: 0.7, ease: "easeOut" }} title={`${item.count} bookings`} /><span>{item._id.slice(5)}</span></div>)}</div></motion.div>
+
+        {/* Biometric Verification Queue Section */}
+        <PendingVerifications onReviewComplete={loadOverview} />
+
         {message && <p className="lead-copy" role="status">{message}</p>}
     </section>;
 }
