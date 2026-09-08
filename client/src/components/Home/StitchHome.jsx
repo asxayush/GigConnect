@@ -1,12 +1,122 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
+import WorkerRadarMap from "../Map/WorkerRadarMap";
+import { showToast } from "../../toast";
 
 export default function StitchHome({ onNavigate }) {
   const { t } = useTranslation();
-  const [selectedService, setSelectedService] = useState("cleaning");
-  const [pincode, setPincode] = useState("Indiranagar Stage II, BLR");
-  const [slot, setSlot] = useState("Tomorrow, 09:30 AM");
-  const [activeCategory, setActiveCategory] = useState("Deep Clean");
+
+  // Radar Map Workers Dataset (Coordinates calibrated for tactical radar view)
+  const radarWorkers = [
+    {
+      id: "w1",
+      name: "Rajesh Kumar Sharma",
+      role: "Master Plumber & Pipefitter",
+      craft: "plumbing",
+      rating: "4.92",
+      jobs: "318 jobs completed",
+      rate: "₹600",
+      mapRate: "₹600",
+      rateUnit: "/day",
+      distance: "1.4 km",
+      city: "Bengaluru, India",
+      experience: "5 years",
+      workType: "On-site",
+      jobNature: "Full Time",
+      fixedPrice: "₹800/day",
+      radarX: 46,
+      radarY: 40,
+      image:
+        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w2",
+      name: "Sunita Devi",
+      role: "Master Cook & Nutritionist",
+      craft: "cooking",
+      rating: "4.96",
+      jobs: "420 jobs completed",
+      rate: "₹450",
+      mapRate: "₹450",
+      rateUnit: "/visit",
+      distance: "2.1 km",
+      city: "Bengaluru, India",
+      experience: "8 years",
+      workType: "On-site",
+      jobNature: "Part Time",
+      fixedPrice: "₹450/visit",
+      radarX: 26,
+      radarY: 36,
+      image:
+        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w3",
+      name: "Arun V. Nair",
+      role: "Licensed Master Electrician",
+      craft: "electrical",
+      rating: "4.88",
+      jobs: "195 jobs completed",
+      rate: "₹800",
+      mapRate: "₹800",
+      rateUnit: "/day",
+      distance: "3.2 km",
+      city: "Bengaluru, India",
+      experience: "7 years",
+      workType: "On-site",
+      jobNature: "Full Time",
+      fixedPrice: "₹800/day",
+      radarX: 72,
+      radarY: 26,
+      image:
+        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w4",
+      name: "Pooja Hegde",
+      role: "Deep Cleaning Specialist",
+      craft: "cleaning",
+      rating: "4.95",
+      jobs: "280 jobs completed",
+      rate: "₹350",
+      mapRate: "₹350",
+      rateUnit: "/service",
+      distance: "1.8 km",
+      city: "Bengaluru, India",
+      experience: "4 years",
+      workType: "On-site",
+      jobNature: "Part Time",
+      fixedPrice: "₹350/service",
+      radarX: 84,
+      radarY: 52,
+      image:
+        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w5",
+      name: "Kavitha Murthy",
+      role: "Sanitation & Housekeeping",
+      craft: "cleaning",
+      rating: "4.91",
+      jobs: "380 jobs completed",
+      rate: "₹500",
+      mapRate: "₹500",
+      rateUnit: "/day",
+      distance: "2.6 km",
+      city: "Bengaluru, India",
+      experience: "6 years",
+      workType: "On-site",
+      jobNature: "Full Time",
+      fixedPrice: "₹500/day",
+      radarX: 56,
+      radarY: 64,
+      image:
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+    },
+  ];
+
+  const [selectedWorker, setSelectedWorker] = useState(radarWorkers[0]);
+  const [activeNavTab, setActiveNavTab] = useState("home"); // 'home' | 'messages' | 'saved'
 
   const categories = [
     { name: "Plumbing", icon: "plumbing", count: "340+ Pros" },
@@ -16,55 +126,6 @@ export default function StitchHome({ onNavigate }) {
     { name: "Carpentry", icon: "carpenter", count: "190+ Pros" },
     { name: "Appliances", icon: "mode_fan", count: "420+ Pros" },
     { name: "Painting", icon: "format_paint", count: "165+ Pros" },
-  ];
-
-  const popularServices = [
-    { title: "House Deep Cleaning", icon: "sanitizer" },
-    { title: "Ceiling Fan Repair", icon: "toys" },
-    { title: "Furniture Assembly", icon: "chair" },
-    { title: "RO Water Purifier Service", icon: "water_drop" },
-    { title: "Daily Home Cook", icon: "soup_kitchen" },
-    { title: "Switchboard Fixing", icon: "power" },
-    { title: "Sofa Shampooing", icon: "living" },
-    { title: "Bathroom Leakage Fix", icon: "shower" },
-    { title: "Wall Crack Putty", icon: "brush" },
-    { title: "AC Filter Deep Wash", icon: "ac_unit" },
-  ];
-
-  const featuredWorkers = [
-    {
-      name: "Sunita Devi",
-      role: "Master Cook • North & South Cuisine",
-      rating: "4.94",
-      jobs: "420+ completed gigs",
-      rate: "₹350",
-      rateUnit: "/visit",
-      unit: "Co-op Unit #BLR-402",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuC47C1-igLvcaZfPuU6EpH-Byy9NcKNL2oCySKEpLvXjYmuOHvQTlfrS-qBv0f6O1wtarJQhmICS9l1DVi92_s3ERr-72-85Tfwcpib2li6c9-lUJK7MDF6mdOe8RKlcQHPu8Tt0JQlVqpSBInacUnV-LadsJvvqEwPrtC9eE8EQ92Ql05UWAq7zoytsxvwkcOAteYhhvY6qQPGGb-n4mMEyBLROXcdTktxABXV-vSMHmrYg4EwXsYD",
-    },
-    {
-      name: "Ramesh Kumar",
-      role: "Licensed Master Electrician • Inverters & Mains",
-      rating: "4.98",
-      jobs: "610+ completed gigs",
-      rate: "₹299",
-      rateUnit: "/service",
-      unit: "Co-op Unit #BLR-118",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDCQMJAooztXiuzQcwVpaALbMmxNmhFPVVln6oF6k_0Ml0ZLr4-OvV_ZCR1HcsqbPXRlrJtLPfMKEK-8Vg0rC-9ZH2G5aLx0E6XTKHyFxY0TyBTrXjC258Yrbq16SptzF2500VxbHpBixfUmsd3I7acpOz9ykGvXrcFmDNCkD-IxO60LCeR28axd0eVirOTgtXr_67qBmFLsMG1EpBLkXkUpt42X_WE_jbsK2CqCRXlTr3fmtqYNPFU",
-    },
-    {
-      name: "Kavitha M.",
-      role: "Deep Cleaning Specialist • Steam Sanitation",
-      rating: "4.91",
-      jobs: "380+ completed gigs",
-      rate: "₹549",
-      rateUnit: "/base rate",
-      unit: "Co-op Unit #BLR-205",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBqjucqamkZdtyEhy66RwDBiPyC6GzAHfCd0PvlhIOaPEfc1qJXxqwvotGaJdSDA8ZLwNJV1wPNC4MQfWSYNks8K92L5G507VvpprMRUyvmy4PM9Kea2CVJ2EoCF-TW-ctUKMZL7XPT2UDseg9pk28AGq95F289gvgVPel11vPAO-6Yv5IO74p0tAj4NfeXhaNANaara6uLIBdeDo9P1YXYa1x4SMUIRkFhtFuXQKfulci5haftWlIy",
-    },
   ];
 
   const testimonials = [
@@ -94,579 +155,412 @@ export default function StitchHome({ onNavigate }) {
     },
   ];
 
-  const handleBookNow = () => {
-    onNavigate?.("booking", {
-      skills: [selectedService],
-      prefilledDate: slot,
-    });
-  };
-
-  const handleBookWorker = (worker) => {
+  const handleHireWorker = (worker) => {
     onNavigate?.("booking", {
       name: worker.name,
       skills: [worker.role],
       price: worker.rate,
-      prefilledDate: slot,
+      prefilledDate: "Tomorrow, 09:30 AM",
     });
   };
 
   return (
-    <div className="w-full bg-surface text-on-surface antialiased">
-      <div className="flex flex-col w-full relative overflow-hidden">
-        {/* Decorative Ambient Corner Anchors */}
-        <div className="absolute -top-12 -right-12 w-96 h-96 pointer-events-none opacity-[0.06] text-primary-container z-0 select-none">
-          <svg className="w-full h-full" fill="currentColor" viewBox="0 0 200 200">
-            <path
-              d="M42.7,-72.8C54.9,-67.2,64,-55.8,70.9,-43.1C77.8,-30.4,82.5,-16.4,81.4,-2.8C80.3,10.8,73.4,24.1,65.2,36C57,47.9,47.5,58.4,36,65.8C24.5,73.2,11,77.5,-2.9,82.5C-16.8,87.6,-31.2,93.4,-44.6,88.7C-58,84,-70.4,68.8,-77.3,52.3C-84.2,35.8,-85.6,18,-83.4,1.3C-81.2,-15.4,-75.4,-31,-65.7,-43.3C-56,-55.6,-42.4,-64.6,-28.9,-69.5C-15.4,-74.4,-2,-75.2,10.9,-72.1L42.7,-72.8Z"
-              transform="translate(100 100)"
-            />
-          </svg>
-        </div>
-        <div className="absolute bottom-40 -left-16 w-80 h-80 pointer-events-none opacity-[0.05] text-primary z-0 select-none">
-          <svg className="w-full h-full" fill="currentColor" viewBox="0 0 200 200">
-            <circle cx="100" cy="100" fill="none" r="80" stroke="currentColor" strokeDasharray="6,6" strokeWidth="1.5" />
-            <circle cx="100" cy="100" fill="none" r="60" stroke="currentColor" strokeWidth="1" />
-            <circle cx="100" cy="100" fill="none" r="40" stroke="currentColor" strokeDasharray="4,4" strokeWidth="1.5" />
-            <path d="M20,100 L180,100 M100,20 L100,180" stroke="currentColor" strokeWidth="0.75" />
-          </svg>
-        </div>
-
-        {/* Hero Section */}
-        <section className="relative z-10 max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop pt-space-8 md:pt-space-12 pb-space-8 w-full">
-          <div className="flex flex-col items-center text-center max-w-4xl mx-auto">
-            {/* Eyebrow Pill */}
-            <div className="inline-flex items-center gap-space-2 px-space-4 py-space-1 bg-secondary-fixed/50 text-secondary rounded-full shadow-sm mb-space-4">
-              <span className="w-2 h-2 rounded-full bg-secondary-container animate-pulse" />
-              <span className="font-label-sm text-label-sm tracking-wider uppercase font-bold text-secondary">
-                Cooperative-Owned Service Network
-              </span>
-            </div>
-
-            {/* Main Headline */}
-            <h1 className="font-display text-headline-lg-mobile md:text-display text-primary tracking-tight font-extrabold max-w-3xl mb-space-4 leading-tight">
-              Reliable help from workers your neighbourhood trusts.
-            </h1>
-
-            {/* Subtext */}
-            <p className="font-body-lg text-body-lg text-on-surface-variant max-w-2xl leading-relaxed mb-space-8">
-              India’s first democratic worker-owned cooperative federation. Verified domestic professionals, transparent living-wage tariffs, and 0% exploitative platform intermediary commissions.
-            </p>
-
-            {/* Search & Booking Card Widget */}
-            <div className="w-full bg-surface-container-lowest rounded-xl shadow-xl p-space-4 md:p-space-6 flex flex-col lg:flex-row items-stretch lg:items-center gap-space-4">
-              {/* Service Input */}
-              <div className="flex-1 flex items-center gap-space-3 bg-surface-container-low px-space-4 py-space-3 rounded-xl">
-                <span className="material-symbols-outlined text-primary text-[22px]">home_repair_service</span>
-                <div className="flex flex-col text-left flex-1 min-w-0">
-                  <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="service-selector">
-                    Service Type
-                  </label>
-                  <select
-                    id="service-selector"
-                    className="bg-transparent font-label-lg text-label-lg text-on-surface focus:outline-none cursor-pointer pt-0.5 w-full truncate border-none"
-                    value={selectedService}
-                    onChange={(e) => setSelectedService(e.target.value)}
-                  >
-                    <option value="cleaning">Deep Home Cleaning</option>
-                    <option value="plumbing">Plumbing Diagnostics & Repair</option>
-                    <option value="electrical">Electrical Wire & Appliance</option>
-                    <option value="carpentry">Custom Furniture & Carpentry</option>
-                    <option value="cooking">Daily Home Cook & Nutrition</option>
-                    <option value="appliances">AC & RO Purifier Maintenance</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Locality / Pincode */}
-              <div className="flex-1 flex items-center gap-space-3 bg-surface-container-low px-space-4 py-space-3 rounded-xl">
-                <span className="material-symbols-outlined text-secondary-container text-[22px]">location_on</span>
-                <div className="flex flex-col text-left flex-1 min-w-0">
-                  <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="pincode-input">
-                    Locality or Pincode
-                  </label>
-                  <input
-                    id="pincode-input"
-                    type="text"
-                    className="bg-transparent font-label-lg text-label-lg text-on-surface placeholder:text-outline focus:outline-none pt-0.5 w-full truncate border-none"
-                    value={pincode}
-                    onChange={(e) => setPincode(e.target.value)}
-                    placeholder="e.g. Indiranagar, 560038"
-                  />
-                </div>
-              </div>
-
-              {/* Date & Slot */}
-              <div className="flex-1 flex items-center gap-space-3 bg-surface-container-low px-space-4 py-space-3 rounded-xl">
-                <span className="material-symbols-outlined text-primary-container text-[22px]">calendar_month</span>
-                <div className="flex flex-col text-left flex-1 min-w-0">
-                  <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="slot-input">
-                    Preferred Slot
-                  </label>
-                  <input
-                    id="slot-input"
-                    type="text"
-                    className="bg-transparent font-label-lg text-label-lg text-on-surface placeholder:text-outline focus:outline-none pt-0.5 w-full truncate border-none"
-                    value={slot}
-                    onChange={(e) => setSlot(e.target.value)}
-                    placeholder="Today / Tomorrow"
-                  />
-                </div>
-              </div>
-
-              {/* CTA Button */}
-              <button
-                type="button"
-                onClick={handleBookNow}
-                className="flex items-center justify-center gap-space-2 px-space-8 py-space-4 bg-secondary-container text-on-secondary font-label-lg text-label-lg rounded-xl shadow-md hover:opacity-95 active:scale-98 transition-all shrink-0 cursor-pointer border-none font-bold"
-              >
-                <span>Book Now</span>
-                <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
-              </button>
-            </div>
-
-            {/* Quick Micro Guarantees */}
-            <div className="flex flex-wrap items-center justify-center gap-space-6 mt-space-4 text-on-surface-variant">
-              <span className="flex items-center gap-space-1 font-label-sm text-label-sm">
-                <span className="material-symbols-outlined text-[16px] text-tertiary-container">verified_user</span> 100% Aadhaar Verified Staff
-              </span>
-              <span className="flex items-center gap-space-1 font-label-sm text-label-sm">
-                <span className="material-symbols-outlined text-[16px] text-tertiary-container">account_balance</span> 92% Payout to Co-op Workers
-              </span>
-              <span className="flex items-center gap-space-1 font-label-sm text-label-sm">
-                <span className="material-symbols-outlined text-[16px] text-tertiary-container">history</span> Free Reschedule & Escrow Protect
-              </span>
-            </div>
-          </div>
-        </section>
-
-        {/* Service Categories Horizontal Bar */}
-        <section className="w-full max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-space-8">
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-space-3">
-            {categories.map((cat) => {
-              const isActive = activeCategory === cat.name;
-              return (
-                <button
-                  key={cat.name}
-                  onClick={() => {
-                    setActiveCategory(cat.name);
-                    setSelectedService(cat.name.toLowerCase());
-                  }}
-                  className={`group flex flex-col items-center text-center p-space-4 bg-surface-container-lowest rounded-xl shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all border-none cursor-pointer ${
-                    isActive ? "shadow-md -translate-y-0.5 ring-2 ring-secondary-container" : ""
-                  }`}
-                >
-                  <div
-                    className={`w-12 h-12 rounded-xl flex items-center justify-center mb-space-3 transition-colors ${
-                      isActive || cat.highlight
-                        ? "bg-secondary-fixed text-secondary"
-                        : "bg-surface-container-low text-primary-container group-hover:bg-primary-container group-hover:text-on-primary"
-                    }`}
-                  >
-                    <span className="material-symbols-outlined text-[26px]">{cat.icon}</span>
-                  </div>
-                  <span className={`font-label-lg text-label-lg font-semibold ${isActive || cat.highlight ? "text-secondary font-bold" : "text-on-surface"}`}>
-                    {cat.name}
-                  </span>
-                  <span className={`font-body-sm text-body-sm mt-0.5 ${isActive || cat.highlight ? "text-secondary font-medium" : "text-on-surface-variant"}`}>
-                    {cat.count}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </section>
-
-        {/* Popular On-Demand Services Pill-Tag Grid */}
-        <section className="w-full max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-space-6">
-          <div className="bg-surface-container-low rounded-xl p-space-6 md:p-space-8 shadow-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-space-2 mb-space-6">
-              <div>
-                <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider font-bold">
-                  Quick Direct Bookings
-                </span>
-                <h2 className="font-headline-md text-headline-md text-primary font-bold">
-                  Popular On-Demand Services in Your Sector
-                </h2>
-              </div>
-              <button
-                type="button"
-                onClick={() => onNavigate?.("find-help")}
-                className="inline-flex items-center gap-space-1 font-label-lg text-label-lg text-primary-container hover:text-primary font-bold underline transition-colors bg-transparent border-none cursor-pointer self-start sm:self-auto"
-              >
-                <span>See All 45+ Services</span>
-                <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
-              </button>
-            </div>
-            <div className="flex flex-wrap gap-space-2 md:gap-space-3">
-              {popularServices.map((srv) => (
-                <button
-                  key={srv.title}
-                  type="button"
-                  onClick={() => {
-                    setSelectedService(srv.title);
-                    handleBookNow();
-                  }}
-                  className="inline-flex items-center gap-space-2 px-space-4 py-space-2 bg-surface-container-lowest text-on-surface rounded-full shadow-sm hover:bg-primary-container hover:text-on-primary transition-all text-sm font-medium border-none cursor-pointer"
-                >
-                  <span className="material-symbols-outlined text-[18px]">{srv.icon}</span>
-                  <span>{srv.title}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Visual Bento & Featured Federation Professionals Showcase */}
-        <section className="w-full max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-space-12">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-4 mb-space-8">
+    <div className="w-full bg-surface text-on-surface antialiased min-h-screen">
+      {/* 1. TOP DUAL-PANE DISPATCH HERO (Matching Web App Palette) */}
+      <section className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-12">
+        <div className="bg-surface-container-low rounded-[36px] p-4 sm:p-6 lg:p-8 shadow-[0_8px_30px_rgba(0,53,72,0.05)] border border-surface-container-high grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-stretch">
+          {/* LEFT PANE */}
+          <div className="lg:col-span-6 flex flex-col justify-between space-y-6">
             <div>
-              <div className="inline-flex items-center gap-space-2 text-primary-container font-label-md text-label-md font-bold mb-space-1">
-                <span className="material-symbols-outlined text-[18px]">co_present</span>
-                <span>MEMBER-OWNER ROSTER</span>
-              </div>
-              <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary font-bold">
-                Top-rated cooperative professionals near you
-              </h2>
-            </div>
-            <button
-              type="button"
-              onClick={() => onNavigate?.("find-help")}
-              className="text-secondary-container hover:text-secondary font-label-lg text-label-lg font-bold flex items-center gap-space-1 self-start md:self-auto bg-transparent border-none cursor-pointer"
-            >
-              <span>Explore All Cooperatives</span>
-              <span className="material-symbols-outlined text-[18px]">chevron_right</span>
-            </button>
-          </div>
-
-          {/* Worker Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-space-6">
-            {featuredWorkers.map((worker) => (
-              <div
-                key={worker.name}
-                className="bg-surface-container-lowest rounded-xl p-space-6 shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-start justify-between gap-space-3 mb-space-4">
-                    <div className="relative">
-                      <img
-                        className="w-16 h-16 rounded-full object-cover shadow-inner"
-                        src={worker.image}
-                        alt={worker.name}
-                      />
-                      <span className="absolute -bottom-1 -right-1 bg-tertiary-fixed text-on-tertiary-fixed p-0.5 rounded-full shadow-sm flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[14px] block">verified</span>
-                      </span>
-                    </div>
-                    <div className="flex flex-col items-end">
-                      <span className="px-space-3 py-0.5 bg-surface-container text-tertiary font-label-sm text-label-sm rounded-full font-bold flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[14px]">shield</span> Aadhaar Active
-                      </span>
-                      <span className="text-on-surface-variant font-label-sm text-label-sm mt-1">{worker.unit}</span>
-                    </div>
-                  </div>
-                  <h3 className="font-title-md text-title-md font-bold text-on-surface m-0">{worker.name}</h3>
-                  <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-3 mt-1">{worker.role}</p>
-                  <div className="flex items-center gap-space-3 mb-space-4 pb-space-4 bg-surface-container-low/50 p-space-2 rounded-lg">
-                    <div className="flex items-center text-secondary">
-                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                        star
-                      </span>
-                      <span className="font-label-lg text-label-lg font-bold ml-1">{worker.rating}</span>
-                    </div>
-                    <span className="text-outline-variant font-label-sm">•</span>
-                    <span className="font-label-sm text-label-sm text-on-surface-variant">{worker.jobs}</span>
-                  </div>
+              {/* Top Mini Navigation Bar */}
+              <div className="flex items-center justify-between gap-4 mb-6">
+                <div className="flex items-center gap-2 font-headline-sm text-headline-sm font-bold text-primary tracking-tight">
+                  <span>GigConnect</span>
                 </div>
-                <div className="flex items-center justify-between pt-space-2">
-                  <div>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant block">Cooperative Standard</span>
-                    <span className="font-headline-sm text-headline-sm font-bold text-primary">
-                      {worker.rate}
-                      <span className="font-body-sm text-body-sm text-on-surface-variant font-normal">{worker.rateUnit}</span>
-                    </span>
-                  </div>
+                <div className="flex items-center gap-1.5 p-1 bg-surface-container-lowest/90 backdrop-blur-md rounded-full border border-surface-container-high shadow-sm">
                   <button
                     type="button"
-                    onClick={() => handleBookWorker(worker)}
-                    className="px-space-4 py-space-2 bg-secondary-container text-on-secondary font-label-md text-label-md rounded-xl hover:opacity-90 font-bold transition-all shadow-sm border-none cursor-pointer"
+                    onClick={() => setActiveNavTab("home")}
+                    className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold border-none cursor-pointer transition-all ${
+                      activeNavTab === "home"
+                        ? "bg-primary text-on-primary shadow-sm"
+                        : "text-on-surface-variant hover:text-primary bg-transparent"
+                    }`}
                   >
-                    Book {worker.name.split(" ")[0]}
+                    <span className="material-symbols-outlined text-[14px]">home</span>
+                    <span>Home</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("find-help")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-primary bg-transparent border-none cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">chat_bubble_outline</span>
+                    <span>Messages</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onNavigate("booking")}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-semibold text-on-surface-variant hover:text-primary bg-transparent border-none cursor-pointer transition-all"
+                  >
+                    <span className="material-symbols-outlined text-[14px]">bookmark_border</span>
+                    <span>Saved</span>
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
 
-        {/* Trust & Verification Section (3 Callout Cards) */}
-        <section className="w-full bg-surface-container-low py-space-16">
-          <div className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop">
-            <div className="text-center max-w-2xl mx-auto mb-space-12">
-              <span className="font-label-sm text-label-sm text-secondary uppercase font-bold tracking-wider">
-                Democratic Security Architecture
-              </span>
-              <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary font-bold mt-space-1">
-                Why your neighbourhood chooses a cooperative
-              </h2>
-              <p className="font-body-md text-body-md text-on-surface-variant mt-space-2">
-                Unlike private venture-backed gig apps that squeeze worker margins and cut safety corners, GigConnect is legally co-owned by workers and patrons.
-              </p>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-space-6">
-              {/* Trust Card 1 */}
-              <div className="bg-surface-container-lowest rounded-xl p-space-8 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-12 h-12 rounded-xl bg-tertiary-fixed/30 text-tertiary-container flex items-center justify-center mb-space-6">
-                    <span className="material-symbols-outlined text-[28px]">verified_user</span>
-                  </div>
-                  <div className="inline-flex items-center gap-space-1 px-space-3 py-1 bg-surface-container text-tertiary font-label-sm text-label-sm rounded-full font-bold mb-space-3">
-                    <span className="material-symbols-outlined text-[14px]">fingerprint</span>
-                    <span>UIDAI Biometric Authenticated</span>
-                  </div>
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold mb-space-2 m-0">
-                    100% Aadhaar & Police Verified
-                  </h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                    Every service professional undergoes mandatory residential address background checks, live biometric identity clearance, and local ward cooperative peer-sponsoring before their first assignment.
-                  </p>
-                </div>
-                <div className="pt-space-6 mt-space-6 flex items-center gap-space-2 text-tertiary font-label-md text-label-md font-bold border-t border-surface-container">
-                  <span className="material-symbols-outlined text-[18px]">verified</span> Zero unvetted sub-contracting
-                </div>
+              {/* Big Display Title + Secondary Container Plus Action Button */}
+              <div className="flex items-center justify-between mb-6">
+                <h1 className="text-3xl sm:text-4xl font-extrabold text-primary leading-[1.15] tracking-tight font-headline-lg">
+                  Let’s Find <br />
+                  <span className="text-primary">Perfect Match</span>
+                </h1>
+                <button
+                  type="button"
+                  onClick={() => onNavigate("register")}
+                  className="w-12 h-12 rounded-full bg-secondary-container hover:bg-secondary active:scale-95 text-on-secondary flex items-center justify-center font-bold text-2xl shadow-md shadow-secondary-container/20 transition-all border-none cursor-pointer"
+                  title="Register as Worker or Post Job"
+                >
+                  +
+                </button>
               </div>
 
-              {/* Trust Card 2 */}
-              <div className="bg-surface-container-lowest rounded-xl p-space-8 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-12 h-12 rounded-xl bg-primary-fixed text-primary-container flex items-center justify-center mb-space-6">
-                    <span className="material-symbols-outlined text-[28px]">groups</span>
-                  </div>
-                  <div className="inline-flex items-center gap-space-1 px-space-3 py-1 bg-primary-fixed/40 text-primary-container font-label-sm text-label-sm rounded-full font-bold mb-space-3">
-                    <span className="material-symbols-outlined text-[14px]">how_to_vote</span>
-                    <span>Democratic Shareholding</span>
-                  </div>
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold mb-space-2 m-0">
-                    14,800+ Verified Worker-Owners
-                  </h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                    Active across 6 metro clusters. Service providers elect their own board of directors, vote annually on algorithm transparency rules, and collectively govern peak hour service guidelines.
-                  </p>
-                </div>
-                <div className="pt-space-6 mt-space-6 flex items-center gap-space-2 text-primary font-label-md text-label-md font-bold border-t border-surface-container">
-                  <span className="material-symbols-outlined text-[18px]">hub</span> Multi-State Cooperative Society Registered
-                </div>
-              </div>
-
-              {/* Trust Card 3 */}
-              <div className="bg-surface-container-lowest rounded-xl p-space-8 shadow-sm flex flex-col justify-between">
-                <div>
-                  <div className="w-12 h-12 rounded-xl bg-secondary-fixed text-secondary flex items-center justify-center mb-space-6">
-                    <span className="material-symbols-outlined text-[28px]">savings</span>
-                  </div>
-                  <div className="inline-flex items-center gap-space-1 px-space-3 py-1 bg-secondary-fixed/50 text-secondary font-label-sm text-label-sm rounded-full font-bold mb-space-3">
-                    <span className="material-symbols-outlined text-[14px]">lock</span>
-                    <span>Fair Wage Standard</span>
-                  </div>
-                  <h3 className="font-headline-sm text-headline-sm text-primary font-bold mb-space-2 m-0">
-                    Cooperative Ownership Guarantee
-                  </h3>
-                  <p className="font-body-md text-body-md text-on-surface-variant leading-relaxed">
-                    92% of your booking fee transfers straight into the worker’s UPI bank account upon PIN clearance. The remaining 8% finances community health insurance, maternity relief, and children’s education corpus.
-                  </p>
-                </div>
-                <div className="pt-space-6 mt-space-6 flex items-center gap-space-2 text-secondary font-label-md text-label-md font-bold border-t border-surface-container">
-                  <span className="material-symbols-outlined text-[18px]">favorite</span> Community pension protected
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Cooperative Transparency & Escrow Infographic Card */}
-        <section className="w-full max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-space-12">
-          <div className="bg-primary-container text-on-primary rounded-xl p-space-8 md:p-space-12 shadow-xl flex flex-col lg:flex-row items-center gap-space-8 relative overflow-hidden">
-            {/* Background SVG Jaali Pattern Accent */}
-            <div className="absolute right-0 top-0 w-96 h-96 opacity-10 pointer-events-none text-on-primary">
-              <svg fill="currentColor" viewBox="0 0 100 100">
-                <pattern id="jaali-pattern" patternUnits="userSpaceOnUse" width="20" height="20">
-                  <path d="M 0 10 L 10 0 L 20 10 L 10 20 Z" fill="none" stroke="currentColor" strokeWidth="1" />
-                  <circle cx="10" cy="10" r="2" fill="currentColor" />
-                </pattern>
-                <rect width="100" height="100" fill="url(#jaali-pattern)" />
-              </svg>
-            </div>
-
-            <div className="flex-1 z-10">
-              <span className="px-space-3 py-1 bg-surface-container-lowest/15 rounded-full font-label-sm text-label-sm text-primary-fixed uppercase tracking-wider font-semibold">
-                Financial Transparency Audit
-              </span>
-              <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg font-bold text-on-primary mt-space-3 mb-space-4">
-                Where does your ₹100 spend go?
-              </h2>
-              <p className="font-body-md text-body-md text-on-primary-container max-w-lg mb-space-6">
-                Compare GigConnect’s democratic model against private venture gig platforms taking up to 35% commission with zero health or pension protection.
-              </p>
-              <div className="flex flex-col gap-space-3 max-w-md">
-                {/* Item 1 */}
-                <div>
-                  <div className="flex justify-between font-label-sm text-label-sm text-on-primary mb-1">
-                    <span className="font-semibold">₹92.00 Direct Worker Bank Account</span>
-                    <span className="text-tertiary-fixed font-bold">92%</span>
-                  </div>
-                  <div className="w-full bg-surface-container-lowest/20 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-tertiary-fixed h-full rounded-full" style={{ width: "92%" }} />
-                  </div>
-                </div>
-                {/* Item 2 */}
-                <div>
-                  <div className="flex justify-between font-label-sm text-label-sm text-on-primary mb-1">
-                    <span>₹5.00 Workers Welfare & Health Shield</span>
-                    <span className="text-secondary-fixed font-bold">5%</span>
-                  </div>
-                  <div className="w-full bg-surface-container-lowest/20 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-secondary-fixed h-full rounded-full" style={{ width: "5%" }} />
-                  </div>
-                </div>
-                {/* Item 3 */}
-                <div>
-                  <div className="flex justify-between font-label-sm text-label-sm text-on-primary mb-1">
-                    <span>₹3.00 Server Ops & SMS Dispatch</span>
-                    <span className="text-on-primary-container font-bold">3%</span>
-                  </div>
-                  <div className="w-full bg-surface-container-lowest/20 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-primary-fixed h-full rounded-full" style={{ width: "3%" }} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Quick Escrow Assurance Box */}
-            <div className="w-full lg:w-96 bg-surface-container-lowest text-on-surface rounded-xl p-space-6 shadow-md z-10">
-              <div className="flex items-center gap-space-3 mb-space-4">
-                <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
-                  <span className="material-symbols-outlined text-[24px]">lock_clock</span>
-                </div>
-                <div>
-                  <span className="font-title-md text-title-md font-bold block text-primary">Escrow Trust Release</span>
-                  <span className="font-body-sm text-body-sm text-on-surface-variant">Biometric 4-Digit PIN Handshake</span>
-                </div>
-              </div>
-              <p className="font-body-sm text-body-sm text-on-surface-variant mb-space-4">
-                Your payment is held safely by the Cooperative Custodian until the worker completes the task and you verbally share the one-time job completion code.
-              </p>
-              <div className="p-space-3 bg-surface-container-low rounded-lg flex items-center justify-between text-xs font-bold text-on-surface">
-                <span className="flex items-center gap-1">
-                  <span className="material-symbols-outlined text-[16px] text-tertiary">security</span> Instant Dispute Arbitration
-                </span>
-                <span className="text-secondary-container">Learn More</span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Testimonials Banner with Safety Ratings */}
-        <section className="w-full max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-space-12 mb-space-8">
-          <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-4 mb-space-8">
-            <div>
-              <span className="font-label-sm text-label-sm text-on-surface-variant uppercase font-bold tracking-wider">
-                Patron Experiences
-              </span>
-              <h2 className="font-headline-lg text-headline-lg-mobile md:text-headline-lg text-primary font-bold">
-                Trusted by over 45,000 households
-              </h2>
-            </div>
-            <div className="flex items-center gap-space-2 bg-surface-container-low px-space-4 py-space-2 rounded-full">
-              <div className="flex text-secondary">
-                {[1, 2, 3, 4, 5].map((s) => (
-                  <span key={s} className="material-symbols-outlined text-[20px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                    star
-                  </span>
-                ))}
-              </div>
-              <span className="font-label-lg text-label-lg font-bold text-on-surface">4.89 / 5.0 Global Rating</span>
-            </div>
-          </div>
-
-          {/* Testimonial Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-space-6">
-            {testimonials.map((review) => (
-              <div
-                key={review.name}
-                className="bg-surface-container-lowest rounded-xl p-space-6 shadow-sm flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between mb-space-4">
-                    <div className="flex text-secondary">
-                      {[1, 2, 3, 4].map((s) => (
-                        <span key={s} className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          star
-                        </span>
-                      ))}
-                      <span
-                        className="material-symbols-outlined text-[16px]"
-                        style={{ fontVariationSettings: review.stars === 5 ? "'FILL' 1" : "'FILL' 0" }}
-                      >
-                        {review.stars === 5 ? "star" : "star_half"}
-                      </span>
-                    </div>
-                    <span className="font-label-sm text-label-sm text-tertiary flex items-center gap-1 font-bold">
-                      <span className="material-symbols-outlined text-[14px]">verified</span> Verified Booking
+              {/* Interactive Dashboard Cards Row */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
+                {/* Card 1: Manage Jobs & Applicants */}
+                <div
+                  onClick={() => onNavigate("booking")}
+                  className="bg-surface-container-lowest p-4 rounded-2xl border border-surface-container-high shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between min-h-[135px]"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-full">
+                      Manage
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-secondary-container text-on-secondary flex items-center justify-center text-xs font-bold">
+                      ≡
                     </span>
                   </div>
-                  <p className="font-body-md text-body-md text-on-surface italic mb-space-6">{review.quote}</p>
+                  <div>
+                    <h3 className="font-bold text-sm text-primary leading-tight">
+                      Jobs & Applicants
+                    </h3>
+                    <p className="text-[11px] text-on-surface-variant mt-0.5">5 active • 12 bookings</p>
+                  </div>
                 </div>
-                <div className="flex items-center gap-space-3 pt-space-4 border-t border-surface-container">
-                  <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center font-bold text-primary">
-                    {review.initials}
+
+                {/* Card 2: Find Daily Worker (Secondary Container Card) */}
+                <div
+                  onClick={() => onNavigate("find-help")}
+                  className="bg-secondary-container p-4 rounded-2xl shadow-md shadow-secondary-container/20 hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between min-h-[135px] text-on-secondary"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 bg-primary text-on-primary text-[10px] font-bold rounded-full">
+                      Find
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-black/15 text-on-secondary flex items-center justify-center text-xs">
+                      👤
+                    </span>
                   </div>
                   <div>
-                    <span className="font-title-md text-title-md font-bold block text-on-surface">{review.name}</span>
-                    <span className="font-body-sm text-body-sm text-on-surface-variant">{review.location}</span>
+                    <h3 className="font-bold text-sm text-on-secondary leading-tight">
+                      Daily Worker
+                    </h3>
+                    <p className="text-[11px] text-on-secondary/85 mt-0.5">14 active nearby</p>
+                  </div>
+                </div>
+
+                {/* Card 3: Post Full/Part-Time (Primary Navy Card) */}
+                <div
+                  onClick={() => onNavigate("register")}
+                  className="bg-primary p-4 rounded-2xl shadow-md shadow-primary/20 hover:shadow-lg transition-all cursor-pointer flex flex-col justify-between min-h-[135px] text-on-primary"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-1 bg-primary-container text-on-primary text-[10px] font-bold rounded-full">
+                      Post
+                    </span>
+                    <span className="w-6 h-6 rounded-full bg-white/15 text-on-primary flex items-center justify-center text-xs">
+                      ✎
+                    </span>
+                  </div>
+                  <div>
+                    <h3 className="font-bold text-sm text-on-primary leading-tight">
+                      Full/Part-Time
+                    </h3>
+                    <p className="text-[11px] text-on-primary-container mt-0.5">7 gigs listed</p>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </section>
 
-        {/* Bottom Interactive Cooperative Callout Strip */}
-        <section className="w-full bg-surface-container py-space-8 mb-0">
-          <div className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop flex flex-col sm:flex-row items-center justify-between gap-space-4">
-            <div className="flex items-center gap-space-3">
-              <span className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[20px]">how_to_reg</span>
-              </span>
-              <div>
-                <span className="font-title-md text-title-md font-bold text-primary block">
-                  Are you a skilled domestic or home maintenance worker?
-                </span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Join 14,800+ equals. Receive health coverage, democratic share equity, and daily payouts.
-                </span>
+              {/* Applicants / Verified Workers Reel Header */}
+              <div className="flex items-center justify-between mb-3">
+                <span className="font-bold text-sm text-primary">Nearby Verified Workers</span>
+                <div className="flex items-center -space-x-2">
+                  {radarWorkers.map((w, idx) => (
+                    <img
+                      key={idx}
+                      src={w.image}
+                      alt={w.name}
+                      onClick={() => setSelectedWorker(w)}
+                      className="w-7 h-7 rounded-full object-cover border-2 border-surface-container-lowest cursor-pointer hover:scale-110 transition-transform"
+                    />
+                  ))}
+                  <div className="w-7 h-7 rounded-full bg-surface-container text-primary text-[10px] font-bold border-2 border-surface-container-lowest flex items-center justify-center shadow-sm">
+                    +5
+                  </div>
+                </div>
+              </div>
+
+              {/* Split Row: Mini Specs Card + Spotlight Worker Card */}
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-3.5">
+                {/* Left Mini Specs Card */}
+                <div className="sm:col-span-5 bg-surface-container-lowest p-4 rounded-2xl border border-surface-container-high shadow-sm flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-3">
+                      <span className="px-2.5 py-0.5 bg-primary text-on-primary text-[10px] font-bold rounded-full">
+                        Job Profile
+                      </span>
+                      <span className="w-5 h-5 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center text-[10px]">
+                        ✎
+                      </span>
+                    </div>
+                    <h4 className="font-bold text-xs text-primary">
+                      {selectedWorker.role}
+                    </h4>
+                    <p className="text-[10px] text-on-surface-variant mb-2">
+                      {selectedWorker.city}
+                    </p>
+                    <div className="space-y-1 text-[10px] text-on-surface">
+                      <div>
+                        <strong>{selectedWorker.jobNature}</strong>
+                        <p className="text-[9px] text-on-surface-variant">Employment Type</p>
+                      </div>
+                      <div>
+                        <strong className="text-primary font-bold">{selectedWorker.fixedPrice}</strong>
+                        <p className="text-[9px] text-on-surface-variant">Direct Base Rate</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-2 pt-2 border-t border-surface-container-high text-[10px] text-on-surface-variant font-medium">
+                    {selectedWorker.experience} experience
+                  </div>
+                </div>
+
+                {/* Right Spotlight Worker Card (Secondary Container - Cooperative Palette) */}
+                <div className="sm:col-span-7 bg-secondary-container p-5 rounded-2xl shadow-lg shadow-secondary-container/25 text-on-secondary flex flex-col justify-between relative overflow-hidden">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="px-2.5 py-0.5 bg-primary/25 text-on-secondary text-[10px] font-bold rounded-full">
+                      {selectedWorker.rate}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => showToast(`Saved ${selectedWorker.name} to bookmarks`)}
+                      className="bg-transparent border-none cursor-pointer text-on-secondary hover:scale-110 transition-transform p-0"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">bookmark</span>
+                    </button>
+                  </div>
+
+                  {/* Centered Avatar with Radial Blur */}
+                  <div className="flex flex-col items-center text-center my-1">
+                    <div className="relative w-16 h-16 rounded-full overflow-hidden border-2 border-on-secondary/40 shadow-md mb-2">
+                      <img
+                        src={selectedWorker.image}
+                        alt={selectedWorker.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <h4 className="font-bold text-sm text-on-secondary leading-tight">
+                      {selectedWorker.name}
+                    </h4>
+                    <p className="text-[11px] text-on-secondary/90 font-medium">
+                      {selectedWorker.role}
+                    </p>
+                  </div>
+
+                  {/* Quick Action Pills (Chat, Phone, Mail) in Surface-Lowest / Primary */}
+                  <div className="flex items-center justify-center gap-2 my-2.5">
+                    <button
+                      type="button"
+                      onClick={() => showToast(`Opening chat with ${selectedWorker.name}`)}
+                      className="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center hover:bg-surface-container hover:scale-105 shadow-sm transition-transform border-none cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">chat_bubble</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showToast(`Calling ${selectedWorker.name} via masked IVR...`)}
+                      className="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center hover:bg-surface-container hover:scale-105 shadow-sm transition-transform border-none cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">call</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => showToast(`Sharing inquiry email with ${selectedWorker.name}`)}
+                      className="w-8 h-8 rounded-full bg-surface-container-lowest text-primary flex items-center justify-center hover:bg-surface-container hover:scale-105 shadow-sm transition-transform border-none cursor-pointer"
+                    >
+                      <span className="material-symbols-outlined text-[15px]">mail</span>
+                    </button>
+                  </div>
+
+                  {/* Tags Row */}
+                  <div className="flex items-center justify-center gap-1.5 flex-wrap mb-3 text-[10px] font-semibold text-on-secondary/90">
+                    <span className="px-2 py-0.5 bg-primary/20 rounded-full">{selectedWorker.workType}</span>
+                    <span className="px-2 py-0.5 bg-primary/20 rounded-full">{selectedWorker.jobNature}</span>
+                    <span className="px-2 py-0.5 bg-primary/20 rounded-full">{selectedWorker.experience}</span>
+                    <span className="px-2 py-0.5 bg-primary/20 rounded-full">{selectedWorker.distance}</span>
+                  </div>
+
+                  {/* Deep Navy "Hire Now" Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleHireWorker(selectedWorker)}
+                    className="w-full py-2.5 bg-primary hover:bg-primary-container active:scale-[0.98] text-on-primary font-bold text-xs rounded-full shadow-md transition-all border-none cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <span>Hire Now</span>
+                    <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+                  </button>
+                </div>
               </div>
             </div>
-            <button
-              type="button"
-              onClick={() => onNavigate?.("register")}
-              className="px-space-6 py-space-2.5 bg-primary text-on-primary font-label-md text-label-md rounded-xl hover:bg-primary-container active:scale-98 transition-all shrink-0 font-bold border-none cursor-pointer"
-            >
-              Register as Worker-Owner
-            </button>
           </div>
-        </section>
-      </div>
 
-      {/* Floating 24x7 Help Button */}
-      <aside className="fixed bottom-6 left-6 z-50">
-        <button
-          className="flex items-center gap-space-2 px-space-4 py-space-2 bg-primary-container text-on-primary font-label-md text-label-md rounded-full shadow-lg hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer"
-          type="button"
-          onClick={() => onNavigate?.("admin")}
-        >
-          <span className="material-symbols-outlined text-[18px]">chat</span>
-          <span>Need Help? | 24x7 Cooperative Sahayata</span>
-        </button>
-      </aside>
+          {/* RIGHT PANE: REAL-TIME RADAR MAP */}
+          <div className="lg:col-span-6 h-full flex flex-col">
+            <WorkerRadarMap
+              workers={radarWorkers}
+              selectedWorker={selectedWorker}
+              onSelectWorker={setSelectedWorker}
+              onNavigate={onNavigate}
+            />
+          </div>
+        </div>
+      </section>
+
+      {/* 2. POPULAR TRADE CATEGORIES CAROUSEL */}
+      <section className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-8">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <span className="text-xs font-bold text-secondary uppercase tracking-wider">
+              Explore Disciplines
+            </span>
+            <h2 className="text-2xl font-bold text-primary tracking-tight mt-0.5">
+              Popular Cooperative Services
+            </h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => onNavigate("find-help")}
+            className="text-xs font-bold text-primary hover:underline flex items-center gap-1 bg-transparent border-none cursor-pointer"
+          >
+            <span>View All Services</span>
+            <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+          {categories.map((cat, idx) => (
+            <div
+              key={idx}
+              onClick={() => onNavigate("find-help")}
+              className={`p-4 rounded-2xl text-center cursor-pointer transition-all ${
+                cat.highlight
+                  ? "bg-secondary-container text-on-secondary shadow-md scale-105"
+                  : "bg-surface-container-lowest text-primary hover:shadow-md border border-surface-container-high"
+              }`}
+            >
+              <div
+                className={`w-10 h-10 mx-auto rounded-full flex items-center justify-center mb-2 ${
+                  cat.highlight ? "bg-white/20 text-white" : "bg-surface-container text-primary"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[20px]">{cat.icon}</span>
+              </div>
+              <h4 className="font-bold text-xs truncate">{cat.name}</h4>
+              <p
+                className={`text-[10px] mt-0.5 ${
+                  cat.highlight ? "text-white/80" : "text-on-surface-variant"
+                }`}
+              >
+                {cat.count}
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* 3. COOPERATIVE TRANSPARENCY: 92% DIRECT PAYOUT GUARANTEE */}
+      <section className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-10">
+        <div className="rounded-3xl bg-primary text-on-primary p-8 md:p-12 relative overflow-hidden shadow-xl">
+          <div className="max-w-2xl relative z-10">
+            <span className="text-xs font-bold text-secondary-fixed uppercase tracking-wider">
+              Democratic Economic Model
+            </span>
+            <h3 className="text-2xl md:text-3xl font-extrabold text-white mt-2 mb-4 tracking-tight">
+              Where Your Payment Actually Goes
+            </h3>
+            <p className="text-sm text-primary-fixed-dim mb-8 leading-relaxed">
+              Unlike venture-backed aggregators taking 25–35% in hidden commissions, GigConnect is owned 100% by its member tradespeople.
+            </p>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-white/15">
+              <div>
+                <div className="text-3xl font-extrabold text-secondary-fixed">92%</div>
+                <div className="text-xs font-bold text-white mt-1">Direct to Worker</div>
+                <p className="text-[11px] text-primary-fixed-dim mt-0.5">Jan Dhan or UPI daily settlement</p>
+              </div>
+              <div>
+                <div className="text-3xl font-extrabold text-on-tertiary-container">5%</div>
+                <div className="text-xs font-bold text-white mt-1">Mutual Welfare Fund</div>
+                <p className="text-[11px] text-primary-fixed-dim mt-0.5">Emergency healthcare & insurance</p>
+              </div>
+              <div>
+                <div className="text-3xl font-extrabold text-slate-300">3%</div>
+                <div className="text-xs font-bold text-white mt-1">Platform Tech & Server</div>
+                <p className="text-[11px] text-primary-fixed-dim mt-0.5">Flat audited operating cost</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. VERIFIED COMMUNITY TESTIMONIALS */}
+      <section className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-8 pb-16">
+        <div className="text-center mb-8">
+          <span className="text-xs font-bold text-secondary uppercase tracking-wider">
+            Real Stories
+          </span>
+          <h2 className="text-2xl font-bold text-primary tracking-tight mt-1">
+            Voices of Our Cooperative Community
+          </h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {testimonials.map((item, idx) => (
+            <div
+              key={idx}
+              className="bg-surface-container-lowest p-6 rounded-2xl border border-surface-container-high shadow-sm hover:shadow-md transition-all flex flex-col justify-between"
+            >
+              <div className="mb-4">
+                <div className="flex items-center gap-1 text-secondary-container text-sm mb-3">
+                  {"★".repeat(Math.floor(item.stars))}
+                </div>
+                <p className="text-xs text-on-surface leading-relaxed font-normal italic">
+                  {item.quote}
+                </p>
+              </div>
+              <div className="flex items-center gap-3 pt-3 border-t border-surface-container-high">
+                <div className="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center">
+                  {item.initials}
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-primary">{item.name}</h4>
+                  <p className="text-[10px] text-on-surface-variant">{item.location}</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
     </div>
   );
 }
