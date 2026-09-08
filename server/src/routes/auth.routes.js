@@ -22,7 +22,7 @@ router.post("/register", async (request, response, next) => {
         const user = await User.create({ name, email, phone, passwordHash: await bcrypt.hash(password, 10), role, location });
         if (role === "worker") await WorkerProfile.create({ userId: user._id });
         return response.status(201).json({ success: true, data: { user: { id: user._id, name: user.name, email: user.email, phone: user.phone, role: user.role }, token: signToken(user) }, message: "Account created" });
-    } catch (error) { next(error); }
+    } catch (error) { return response.status(error.statusCode || 502).json({ success: false, message: error.message || "Unable to send OTP" }); }
 });
 
 router.post("/login", async (request, response, next) => {
@@ -51,7 +51,7 @@ router.post("/phone/send", async (request, response, next) => {
         if (!/^\+[1-9]\d{7,14}$/.test(phone || "")) return response.status(400).json({ success: false, message: "Enter a valid phone number with country code, for example +919876543210" });
         const verification = await sendPhoneVerification(phone);
         response.json({ success: true, data: { phone, status: verification.status }, message: "OTP sent" });
-    } catch (error) { next(error); }
+    } catch (error) { return response.status(error.statusCode || 502).json({ success: false, message: error.message || "Unable to send OTP" }); }
 });
 
 router.post("/phone/verify", async (request, response, next) => {

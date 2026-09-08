@@ -1,9 +1,9 @@
 import twilio from "twilio";
 
 const getClient = () => {
-    if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN || !process.env.TWILIO_VERIFY_SERVICE_SID) {
-        throw new Error("Twilio Verify is not configured. Add TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, and TWILIO_VERIFY_SERVICE_SID.");
-    }
+    const missing = ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_VERIFY_SERVICE_SID"].filter((name) => !process.env[name]);
+    if (missing.length) { const error = new Error(`Twilio Verify is not configured. Missing: ${missing.join(", ")}`); error.statusCode = 503; throw error; }
+    if (!/^VA[a-f0-9]{32}$/i.test(process.env.TWILIO_VERIFY_SERVICE_SID)) { const error = new Error("TWILIO_VERIFY_SERVICE_SID must be a Twilio Verify Service SID beginning with VA."); error.statusCode = 503; throw error; }
     return twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
 };
 
