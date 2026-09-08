@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import i18next from "i18next"
-import { AuthView, BookingView, DetailView, RatingView, WorkerRegistration } from "./components/Home/Home"
+import { BookingView, DetailView, RatingView, WorkerRegistration } from "./components/Home/Home"
 import StitchHome from "./components/Home/StitchHome"
 import FindHelp from "./components/FindHelp/FindHelp"
 import MyBookings from "./components/MyBookings/MyBookings"
@@ -57,7 +57,7 @@ function App() {
         {view === "register" && <RegisterWorker onNavigate={navigate} />}
         {view === "admin" && <FederationDesk onNavigate={navigate} />}
         {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}
-        {view === "auth" && <AuthView onNavigate={navigate} />}
+        {view === "auth" && <SignUp onNavigate={navigate} />}
         {view === "public-register" && <SignUp onNavigate={navigate} />}
       </main>
       <StitchFooter onNavigate={navigate} />
