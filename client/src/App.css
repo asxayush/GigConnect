@@ -24,10 +24,29 @@ button, input, select, textarea { font: inherit; } button { cursor: pointer; }
 .hero-card .trust-line { color: #d8d8d8; }
 .hero-visual { position: relative; min-height: 620px; overflow: hidden; background: linear-gradient(118deg, #00FF88 0%, #6cffbb 25%, #ff53d3 72%, #FF00FF 100%); }
 .hero-visual::before { content: ""; position: absolute; inset: 0; background: linear-gradient(145deg, rgba(255,255,255,.24), transparent 35%, rgba(0,0,0,.14)); mix-blend-mode: soft-light; }
-.digital-mesh { position: absolute; inset: -5%; display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(12, 1fr); transform: rotate(-7deg) scale(1.12); }
-.mesh-glyph { display: grid; place-items: center; color: rgba(0, 0, 0, .8); font: 600 clamp(18px, 2vw, 32px)/1 'Barlow Condensed', sans-serif; animation: meshWave 4.8s ease-in-out var(--delay) infinite; }
-.mesh-label { position: absolute; right: 28px; bottom: 25px; color: rgba(0,0,0,.72); font: 600 14px 'Barlow Condensed', sans-serif; letter-spacing: .08em; writing-mode: vertical-rl; }
-@keyframes meshWave { 0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg) scale(.92); opacity: .58; } 45% { transform: translate3d(var(--drift), -5px, 0) rotate(var(--turn)) scale(var(--scale)); opacity: .95; } 70% { transform: translate3d(calc(var(--drift) * -1), 3px, 0) rotate(calc(var(--turn) * -1)) scale(.86); opacity: .68; } }
+/* GSAP hero blobs replace digital mesh — mesh-label retained for label */
+.mesh-label { position: absolute; right: 28px; bottom: 25px; color: rgba(255,255,255,.72); font: 600 14px 'Barlow Condensed', sans-serif; letter-spacing: .08em; writing-mode: vertical-rl; z-index: 1; }
+
+/* Booking bar date picker */
+.booking-quick-dates { display: flex; gap: 6px; }
+.quick-date-btn { min-height: 38px; border: 1px solid rgba(255,255,255,.35); background: transparent; color: #fff; padding: 4px 10px; font: 600 15px 'Barlow Condensed', sans-serif; white-space: nowrap; cursor: pointer; }
+.quick-date-btn:hover { background: var(--accent); border-color: var(--accent); }
+.booking-datepicker { min-height: 48px; min-width: 180px; border: 0; border-bottom: 2px solid var(--accent); background: var(--white); color: var(--ink); font: 600 17px 'Barlow Condensed', sans-serif; padding: 5px 8px; cursor: pointer; }
+.booking-form-datepicker { min-height: 48px; width: 100%; border: 1px solid var(--line); background: var(--white); color: var(--ink); padding: 10px; font-family: Mukta, sans-serif; font-size: 17px; cursor: pointer; }
+
+/* react-datepicker theme overrides — match site design */
+.react-datepicker { border: 1px solid var(--line) !important; border-radius: 0 !important; font-family: 'Mukta', sans-serif !important; background: var(--white) !important; box-shadow: 0 8px 24px rgba(38,65,92,.18) !important; }
+.react-datepicker__header { background: var(--navy) !important; border-bottom: none !important; border-radius: 0 !important; padding: 10px !important; }
+.react-datepicker__current-month, .react-datepicker__day-name, .react-datepicker-time__header { color: #fff !important; font-family: 'Barlow Condensed', sans-serif !important; font-size: 16px !important; font-weight: 600 !important; }
+.react-datepicker__navigation-icon::before { border-color: #fff !important; }
+.react-datepicker__day { color: var(--ink) !important; border-radius: 0 !important; min-width: 2rem !important; }
+.react-datepicker__day:hover { background: var(--bg) !important; color: var(--navy) !important; }
+.react-datepicker__day--selected, .react-datepicker__day--keyboard-selected { background: var(--accent) !important; color: #fff !important; }
+.react-datepicker__day--disabled { opacity: 0.35 !important; cursor: not-allowed !important; }
+.react-datepicker__time-container { border-left: 1px solid var(--line) !important; }
+.react-datepicker__time-list-item { font-family: Mukta, sans-serif !important; color: var(--ink) !important; }
+.react-datepicker__time-list-item--selected { background: var(--accent) !important; color: #fff !important; }
+.react-datepicker__time-list-item:hover { background: var(--bg) !important; }
 .scroll-section { overflow: hidden; }
 .hero-copy { max-width: 900px; }
 .section-kicker { margin: 0 0 12px; color: var(--accent); font: 600 16px 'Barlow Condensed', sans-serif; letter-spacing: .06em; }

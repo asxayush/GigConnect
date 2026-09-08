@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { getPendingWorkers, reviewWorker } from "../../api";
 import { showToast } from "../../toast";
 import "./PendingVerifications.css";
 
 export default function PendingVerifications({ onReviewComplete }) {
+    const { t } = useTranslation();
     const [workers, setWorkers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [actionLoading, setActionLoading] = useState(null);
@@ -20,7 +22,7 @@ export default function PendingVerifications({ onReviewComplete }) {
                 setWorkers(response.data || []);
             }
         } catch (error) {
-            showToast(error.message || "Failed to load pending verifications");
+            showToast(error.message || t("admin.loadingPending"));
         } finally {
             setLoading(false);
         }
@@ -40,13 +42,12 @@ export default function PendingVerifications({ onReviewComplete }) {
 
             const response = await reviewWorker(workerId, status, notes, token);
             if (response.success) {
-                showToast(`Worker ${decision === "approve" ? "approved" : "rejected"} successfully.`);
-                // Remove from pending list
+                showToast(decision === "approve" ? t("admin.approvedSuccess") : t("admin.rejectedSuccess"));
                 setWorkers((prev) => prev.filter((w) => w._id !== workerId));
                 if (onReviewComplete) onReviewComplete();
             }
         } catch (error) {
-            showToast(error.message || `Failed to ${decision} worker`);
+            showToast(error.message || (decision === "approve" ? t("admin.failedApprove") : t("admin.failedReject")));
         } finally {
             setActionLoading(null);
         }
@@ -55,8 +56,8 @@ export default function PendingVerifications({ onReviewComplete }) {
     if (loading) {
         return (
             <div className="pending-verifications-card">
-                <p className="lead-copy" style={{ color: "#8b949e", textAlign: "center" }}>
-                    Loading pending biometric verifications...
+                <p className="lead-copy" style={{ textAlign: "center" }}>
+                    {t("admin.loadingPending")}
                 </p>
             </div>
         );
@@ -66,29 +67,29 @@ export default function PendingVerifications({ onReviewComplete }) {
         <div className="pending-verifications-card">
             <div className="table-header-wrap">
                 <div>
-                    <h3>Aadhaar Biometric Verification Queue</h3>
-                    <p style={{ margin: "0.2rem 0 0", fontSize: "0.85rem", color: "#8b949e" }}>
-                        Workers requiring manual admin inspection due to borderline AI match scores (60% - 85%).
+                    <h3>{t("admin.biometricQueue")}</h3>
+                    <p style={{ margin: "0.2rem 0 0", fontSize: "0.85rem", color: "#66635d" }}>
+                        {t("admin.biometricDesc")}
                     </p>
                 </div>
-                <span className="count-badge">{workers.length} Pending Review</span>
+                <span className="count-badge">{t("admin.pendingReview", { count: workers.length })}</span>
             </div>
 
             {!workers.length ? (
-                <p className="empty-state" style={{ textAlign: "center", padding: "2rem 0" }}>
-                    🎉 All caught up! No worker verifications are pending review.
+            <p className="empty-state" style={{ textAlign: "center", padding: "2rem 0" }}>
+                    🎉 {t("admin.allCaughtUp")}
                 </p>
             ) : (
                 <div className="verifications-table-wrapper">
                     <table className="verifications-table">
                         <thead>
                             <tr>
-                                <th>Worker Details</th>
-                                <th>Masked Aadhaar</th>
-                                <th>Face Comparison</th>
-                                <th>AI Match Score</th>
-                                <th>Extracted OCR Details</th>
-                                <th>Actions</th>
+                                <th>{t("admin.workerDetails")}</th>
+                                <th>{t("admin.maskedAadhaar")}</th>
+                                <th>{t("admin.faceComparison")}</th>
+                                <th>{t("admin.aiScore")}</th>
+                                <th>{t("admin.ocrDetails")}</th>
+                                <th>{t("admin.actions")}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -103,9 +104,9 @@ export default function PendingVerifications({ onReviewComplete }) {
                                             <span>{worker.phone}</span>
                                         </td>
                                         <td>
-                                            <code style={{ background: "#161b22", padding: "0.2rem 0.5rem", borderRadius: "4px" }}>
+                                             <span className="aadhaar-code">
                                                 {worker.aadhaarNumberMasked || "•••• •••• ----"}
-                                            </code>
+                                             </span>
                                         </td>
                                         <td>
                                             <div className="photo-compare-cell">
@@ -159,7 +160,7 @@ export default function PendingVerifications({ onReviewComplete }) {
                                                 disabled={actionLoading === worker._id}
                                                 onClick={() => handleReview(worker._id, "approve")}
                                             >
-                                                {actionLoading === worker._id ? "..." : "Approve ✓"}
+                                                {actionLoading === worker._id ? "..." : t("admin.approveWorker")}
                                             </button>
                                             <button
                                                 type="button"
@@ -167,7 +168,7 @@ export default function PendingVerifications({ onReviewComplete }) {
                                                 disabled={actionLoading === worker._id}
                                                 onClick={() => handleReview(worker._id, "reject")}
                                             >
-                                                Reject ✕
+                                                {t("admin.rejectWorker")}
                                             </button>
                                         </td>
                                     </tr>

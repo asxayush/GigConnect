@@ -1,83 +1,89 @@
-/* Pending Verifications Admin Table Styles */
+/*
+ * PendingVerifications.css
+ * Rewritten to use ONLY App.css CSS variables — no hardcoded dark colors.
+ * Matches site design: var(--white), var(--navy), var(--green), var(--accent), var(--alert), var(--line)
+ */
 
 .pending-verifications-card {
-    background: rgba(22, 27, 34, 0.85);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 16px;
-    padding: 1.8rem;
-    margin-top: 2rem;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    background: var(--white);
+    border: 1px solid var(--line);
+    border-top: 5px solid var(--navy);
+    padding: 25px;
+    margin-top: 18px;
 }
 
 .table-header-wrap {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.2rem;
+    align-items: flex-start;
+    gap: 16px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 16px;
+    margin-bottom: 0;
 }
 
 .table-header-wrap h3 {
     margin: 0;
-    font-size: 1.25rem;
-    color: #f0f6fc;
+    font-size: 26px;
+    color: var(--ink);
 }
 
 .count-badge {
-    background: rgba(210, 153, 34, 0.2);
-    color: #e3b341;
-    border: 1px solid rgba(210, 153, 34, 0.4);
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.8rem;
-    font-weight: 600;
+    padding: 5px 9px;
+    background: #fdf3d1;
+    color: #9e6a03;
+    font: 600 14px 'Barlow Condensed', sans-serif;
+    white-space: nowrap;
 }
 
 .verifications-table-wrapper {
     overflow-x: auto;
+    margin-top: 0;
 }
 
 .verifications-table {
     width: 100%;
     border-collapse: collapse;
     text-align: left;
-    font-size: 0.9rem;
+    font-size: 15px;
 }
 
 .verifications-table th {
-    background: #161b22;
-    padding: 0.85rem 1rem;
-    color: #8b949e;
-    font-weight: 600;
-    border-bottom: 2px solid #30363d;
+    background: var(--bg);
+    padding: 12px 14px;
+    color: var(--navy);
+    font: 600 16px 'Barlow Condensed', sans-serif;
+    border-bottom: 2px solid var(--line);
     white-space: nowrap;
 }
 
 .verifications-table td {
-    padding: 1rem;
-    border-bottom: 1px solid #21262d;
+    padding: 14px;
+    border-bottom: 1px solid var(--line);
     vertical-align: middle;
+    color: var(--ink);
 }
 
 .verifications-table tr:hover {
-    background: rgba(56, 139, 253, 0.04);
+    background: var(--bg);
 }
 
 .worker-cell strong {
     display: block;
-    color: #f0f6fc;
-    font-size: 0.95rem;
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 600;
 }
 
 .worker-cell span {
-    color: #8b949e;
-    font-size: 0.8rem;
+    color: #66635d;
+    font-size: 14px;
 }
 
 .ocr-details-cell {
-    max-width: 220px;
-    font-size: 0.82rem;
-    color: #c9d1d9;
+    max-width: 200px;
+    font-size: 14px;
+    color: var(--ink);
 }
 
 .ocr-details-cell span {
@@ -91,7 +97,7 @@
 .photo-compare-cell {
     display: flex;
     align-items: center;
-    gap: 0.6rem;
+    gap: 8px;
 }
 
 .compare-thumb-wrap {
@@ -102,133 +108,151 @@
     width: 52px;
     height: 52px;
     object-fit: cover;
-    border-radius: 8px;
-    border: 1px solid #30363d;
+    border: 1px solid var(--line);
     cursor: pointer;
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: transform 0.2s;
 }
 
 .compare-thumb:hover {
     transform: scale(1.15);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
-    border-color: #58a6ff;
+    border-color: var(--accent);
+    outline: 2px solid var(--accent);
     z-index: 10;
 }
 
 .thumb-label {
     display: block;
-    font-size: 0.68rem;
-    color: #8b949e;
-    margin-top: 2px;
+    font-size: 12px;
+    color: #66635d;
+    margin-top: 3px;
 }
 
-/* Score cell */
+/* Score badges — use site status-label pattern */
 .score-badge {
     display: inline-block;
-    padding: 0.3rem 0.7rem;
-    border-radius: 12px;
-    font-weight: 700;
-    font-size: 0.85rem;
+    padding: 4px 8px;
+    font: 600 13px 'Barlow Condensed', sans-serif;
     white-space: nowrap;
 }
 
 .score-badge.amber {
-    background: rgba(210, 153, 34, 0.15);
-    color: #e3b341;
-    border: 1px solid rgba(210, 153, 34, 0.4);
+    background: #fdf3d1;
+    color: #9e6a03;
 }
 
 .score-badge.green {
-    background: rgba(46, 160, 67, 0.15);
-    color: #3fb950;
-    border: 1px solid rgba(46, 160, 67, 0.4);
+    background: #d8e7db;
+    color: var(--green);
 }
 
 .score-badge.red {
-    background: rgba(248, 81, 73, 0.15);
-    color: #f85149;
-    border: 1px solid rgba(248, 81, 73, 0.4);
+    background: #f2ddd7;
+    color: var(--alert);
 }
 
-/* Action buttons */
+/* Action buttons — match site button styles */
 .actions-cell {
     white-space: nowrap;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
 }
 
 .btn-approve {
-    background: #238636;
+    min-height: 36px;
+    background: var(--green);
     color: #fff;
     border: none;
-    padding: 0.45rem 0.9rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.8rem;
+    padding: 6px 12px;
+    font: 600 15px 'Barlow Condensed', sans-serif;
     cursor: pointer;
-    margin-right: 0.5rem;
-    transition: background 0.2s;
+    transition: background 0.15s;
 }
 
 .btn-approve:hover:not(:disabled) {
-    background: #2ea043;
+    background: #246040;
+}
+
+.btn-approve:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .btn-reject {
-    background: rgba(218, 54, 51, 0.15);
-    color: #f85149;
-    border: 1px solid rgba(248, 81, 73, 0.3);
-    padding: 0.45rem 0.8rem;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 0.8rem;
+    min-height: 36px;
+    background: transparent;
+    color: var(--alert);
+    border: 1px solid var(--alert);
+    padding: 6px 12px;
+    font: 600 15px 'Barlow Condensed', sans-serif;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.15s;
 }
 
 .btn-reject:hover:not(:disabled) {
-    background: #da3633;
+    background: var(--alert);
     color: #fff;
 }
 
-/* Modal lightbox for full image */
+.btn-reject:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Lightbox for full-size image */
 .image-modal-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    inset: 0;
+    background: rgba(38, 65, 92, 0.75);
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 999;
-    backdrop-filter: blur(4px);
+    z-index: 1000;
 }
 
 .image-modal-content {
     position: relative;
     max-width: 90vw;
     max-height: 90vh;
+    background: var(--white);
+    border-top: 4px solid var(--accent);
+    padding: 8px;
+    box-shadow: 0 24px 56px rgba(38, 65, 92, 0.35);
 }
 
 .image-modal-content img {
     max-width: 100%;
-    max-height: 85vh;
-    border-radius: 12px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    max-height: 80vh;
+    display: block;
 }
 
 .modal-close-btn {
     position: absolute;
-    top: -15px;
-    right: -15px;
-    background: #da3633;
+    top: -14px;
+    right: -14px;
+    min-width: 32px;
+    min-height: 32px;
+    background: var(--alert);
     color: #fff;
-    border: 2px solid #fff;
+    border: 2px solid var(--white);
     border-radius: 50%;
-    width: 32px;
-    height: 32px;
-    font-size: 1.1rem;
+    font-size: 15px;
     font-weight: 700;
     cursor: pointer;
+    display: grid;
+    place-items: center;
+    z-index: 1;
+}
+
+/* Aadhaar masked number */
+.aadhaar-code {
+    display: inline-block;
+    padding: 3px 8px;
+    background: var(--bg);
+    color: var(--navy);
+    font-family: 'Barlow Condensed', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 1px solid var(--line);
 }
