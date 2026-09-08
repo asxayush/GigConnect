@@ -25,6 +25,8 @@ export const getWorkers = (skill, coordinates) => {
 export const register = (data) => apiRequest("/api/auth/register", { method: "POST", body: JSON.stringify(data) });
 export const login = (data) => apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify(data) });
 export const loginWithFirebase = (idToken) => apiRequest("/api/auth/firebase", { method: "POST", headers: { Authorization: `Bearer ${idToken}` } });
+export const sendPhoneOtp = (phone) => apiRequest("/api/auth/phone/send", { method: "POST", body: JSON.stringify({ phone }) });
+export const verifyPhoneOtp = (phone, code) => apiRequest("/api/auth/phone/verify", { method: "POST", body: JSON.stringify({ phone, code }) });
 export const createBooking = (data, token) => apiRequest("/api/bookings", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
 export const getBookings = (token) => apiRequest("/api/bookings", { headers: { Authorization: `Bearer ${token}` } });
 export const updateBookingStatus = (bookingId, status, token) => apiRequest(`/api/bookings/${bookingId}/status`, { method: "PATCH", body: JSON.stringify({ status }), headers: { Authorization: `Bearer ${token}` } });
