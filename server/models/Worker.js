@@ -37,9 +37,33 @@ const workerSchema = new mongoose.Schema(
       max: 100,
       default: 0,
     },
+    gender: {
+      type: String,
+      default: "Male",
+    },
+    trade: {
+      type: String,
+      default: "",
+    },
+    hourlyRate: {
+      type: Number,
+      default: 250,
+    },
+    rating: {
+      type: Number,
+      default: 4.8,
+    },
+    sakhiVerified: {
+      type: Boolean,
+      default: false,
+    },
+    locationCoords: {
+      lat: Number,
+      lng: Number,
+    },
     verificationStatus: {
       type: String,
-      enum: ["pending", "auto_verified", "manually_verified", "rejected"],
+      enum: ["pending", "auto_verified", "manually_verified", "verified", "rejected"],
       default: "pending",
       index: true,
     },

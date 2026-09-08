@@ -180,4 +180,24 @@ router.patch("/workers/:id/review", requireAuth, requireRole("admin", "coordinat
     }
 });
 
+/**
+ * GET /api/admin/tickets
+ * List all support & grievance tickets
+ */
+router.get("/tickets", async (request, response, next) => {
+    try {
+        const Ticket = (await import("../../models/Ticket.js")).default;
+        const tickets = await Ticket.find().sort({ createdAt: -1 }).limit(50).lean();
+
+        response.json({
+            success: true,
+            count: tickets.length,
+            data: tickets,
+            message: "Support & grievance tickets fetched successfully",
+        });
+    } catch (error) {
+        next(error);
+    }
+});
+
 export default router;

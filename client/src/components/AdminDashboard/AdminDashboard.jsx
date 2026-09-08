@@ -3,6 +3,7 @@ import { motion, useReducedMotion } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { getAdminOverview, updateWorkerVerification } from "../../api";
 import PendingVerifications from "./PendingVerifications";
+import LiveGrievanceQueue from "./LiveGrievanceQueue";
 
 const reveal = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } };
 
@@ -222,6 +223,9 @@ function AdminDashboard() {
                     ))}
                 </div>
             </motion.div>
+
+            {/* Live Grievances & AI Support Escalations Queue (§ Real-Time Admin Triage) */}
+            <LiveGrievanceQueue />
 
             {/* Biometric Verification Queue (Aadhaar OCR & Face-Match Bench) */}
             <PendingVerifications onReviewComplete={loadOverview} />

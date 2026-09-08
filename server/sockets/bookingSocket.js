@@ -1,5 +1,6 @@
 import { Server } from "socket.io";
 import { registerChatHandlers } from "./chatSocket.js";
+import { registerSupportHandlers } from "./supportSocket.js";
 
 let ioInstance = null;
 
@@ -20,8 +21,11 @@ export const initBookingSocket = (httpServer) => {
   ioInstance.on("connection", (socket) => {
     console.log(`[Socket.io] Client connected: ${socket.id}`);
 
-    // Register Chat Handlers (join_chat, send_message, typing, stop_typing)
+    // Register Chat Handlers (join_chat, send_message, typing, stop_typing, send_bid, accept_bid)
     registerChatHandlers(ioInstance, socket);
+
+    // Register Support & Escalation Handlers (join_admin_room, escalate_ticket, admin_take_over, resolve_ticket)
+    registerSupportHandlers(ioInstance, socket);
 
     // Worker registers to their private room
     socket.on("joinWorker", ({ workerId }) => {

@@ -18,6 +18,8 @@ import adminRoutes from "./src/routes/admin.routes.js";
 import paymentRoutes from "./src/routes/payment.routes.js";
 import ratingRoutes from "./src/routes/rating.routes.js";
 import chatRoutes from "./routes/chatRoutes.js";
+import toolBankRoutes from "./routes/toolBankRoutes.js";
+import aiRoutes from "./routes/aiRoutes.js";
 
 dotenv.config();
 
@@ -71,6 +73,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/ratings", ratingRoutes);
 app.use("/api/chats", chatRoutes);
+app.use("/api/toolbank", toolBankRoutes);
+app.use("/api/ai", aiRoutes);
 
 // 5. 404 Unmatched Route Handler
 app.use((req, res) => {

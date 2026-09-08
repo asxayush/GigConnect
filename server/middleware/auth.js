@@ -70,3 +70,22 @@ export const authorize = (...roles) => {
 // Backward-compatibility aliases
 export const requireAuth = protect;
 export const requireRole = authorize;
+
+export const requireVerifiedWorker = async (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({ success: false, message: "Authentication required." });
+  }
+
+  const isWorkerRole = req.user.role === "worker";
+  const isVerified = req.user.verificationStatus === "verified";
+
+  if (!isWorkerRole || !isVerified) {
+    return res.status(403).json({
+      success: false,
+      message: "Tool Bank access requires Federation verification.",
+      code: "VERIFICATION_REQUIRED",
+    });
+  }
+
+  next();
+};

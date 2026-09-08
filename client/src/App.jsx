@@ -12,6 +12,8 @@ import FederationDesk from "./components/FederationDesk/FederationDesk"
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard"
 import SignUp from "./components/SignUp/SignUp"
 import Messages from "./components/Messages/Messages"
+import ToolBankMap from "./views/ToolBankMap"
+import SahayataFAB from "./components/SahayataFAB"
 import Toast from "./components/Toast/Toast"
 import { showToast } from "./toast"
 import './App.css'
@@ -58,10 +60,15 @@ function App() {
         {view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} />}
         {view === "register" && <RegisterWorker onNavigate={navigate} />}
         {view === "admin" && <FederationDesk onNavigate={navigate} />}
+        {view === "tool-bank" && <ToolBankMap onNavigate={navigate} />}
         {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}
         {view === "auth" && <SignUp onNavigate={navigate} />}
         {view === "public-register" && <SignUp onNavigate={navigate} />}
       </main>
+      
+      {/* 24x7 Cooperative Sahayata FAB & AI Triage Chat Modal */}
+      <SahayataFAB onNavigate={navigate} />
+
       {view !== "messages" && <StitchFooter onNavigate={navigate} />}
     </div>
   )

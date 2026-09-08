@@ -624,18 +624,6 @@ export default function FederationDesk({ onNavigate }) {
           </section>
         </div>
       )}
-
-      {/* Floating Help Button */}
-      <aside className="fixed bottom-6 left-6 z-50">
-        <button
-          type="button"
-          onClick={handleSahayataClick}
-          className="flex items-center gap-space-2 px-space-4 py-space-2 bg-primary-container text-on-primary font-label-md text-label-md rounded-full shadow-lg hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer font-bold"
-        >
-          <span className="material-symbols-outlined text-[18px]">chat</span>
-          <span>Need Help? | 24x7 Cooperative Sahayata</span>
-        </button>
-      </aside>
     </div>
   );
 }

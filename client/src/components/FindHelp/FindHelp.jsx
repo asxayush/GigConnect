@@ -2,12 +2,14 @@ import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import { motion, AnimatePresence } from "framer-motion";
 import { getWorkers } from "../../api";
 import VoiceAssistant from "../VoiceAssistant/VoiceAssistant";
 
 export default function FindHelp({ onNavigate }) {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState("all");
+  const [sakhiMode, setSakhiMode] = useState(false);
   const [isServiceDropdownOpen, setIsServiceDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -43,10 +45,11 @@ export default function FindHelp({ onNavigate }) {
 
   const serviceOptions = [
     { id: "all", label: "All Crafts & Trades", icon: "handyman", count: "142 Pros" },
-    { id: "plumbing", label: "Plumbing & Water Systems", icon: "plumbing", count: "38 Pros" },
-    { id: "electrical", label: "Electrical & Wiring", icon: "bolt", count: "29 Pros" },
-    { id: "cleaning", label: "Deep Cleaning & Sanitization", icon: "cleaning_services", count: "44 Pros" },
-    { id: "carpentry", label: "Carpentry & Woodcraft", icon: "carpenter", count: "18 Pros" },
+    { id: "electrical", label: "Electrical & Home Power", icon: "bolt", count: "32 Pros" },
+    { id: "cleaning", label: "Deep Cleaning & Care", icon: "cleaning_services", count: "44 Pros" },
+    { id: "carpentry", label: "Carpentry & Furniture", icon: "carpenter", count: "18 Pros" },
+    { id: "appliance", label: "Appliance & HVAC Repair", icon: "mode_fan", count: "21 Pros" },
+    { id: "plumbing", label: "Plumbing & Sanitary", icon: "plumbing", count: "38 Pros" },
     { id: "cooking", label: "Home Cooking & Meals", icon: "skillet", count: "13 Pros" },
   ];
 
@@ -54,103 +57,123 @@ export default function FindHelp({ onNavigate }) {
 
   const categoryChips = [
     { id: "all", label: "All Services (142)" },
-    { id: "plumbing", label: "Plumbing (38)" },
-    { id: "electrical", label: "Electrical (29)" },
-    { id: "cleaning", label: "House Cleaning (44)" },
+    { id: "electrical", label: "Electricians (32)" },
+    { id: "cleaning", label: "Cleaning & Care (44)" },
     { id: "carpentry", label: "Carpentry (18)" },
-    { id: "cooking", label: "Home Cooking (13)" },
+    { id: "appliance", label: "Appliance Repair (21)" },
+    { id: "plumbing", label: "Plumbing (38)" },
+    { id: "cooking", label: "Home Chefs (13)" },
   ];
 
+  // Curated list of 5 seeded Delhi NCR workers + cooperative guild members
   const workers = [
     {
       id: "w1",
-      name: "Rajesh Kumar Sharma",
-      craft: "plumbing",
-      role: "Senior Master Plumber (12 yrs exp)",
-      rating: "4.92",
-      jobs: "318 jobs completed",
-      credential: "Co-op Member #4812",
-      credentialIcon: "groups",
-      skills: ["Pipe Leakage", "Water Tank Cleaning", "Sanitary Fitting"],
-      rateType: "inspection fee",
-      rate: "₹299",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBQ0R4FaK32-LTDKvfVqDbyhtlNTvo_KvcLnDo7QEq2LFNEPa3ce2GFfHRRyrTAl4yhcjTosOPteE20GgS63FLWuJczcBgxM_4p2cMEtDJ34T7nyNcpX9izfiVxxTl_yr_hARPmLFBf38CPBfgBJmeNuaRdry_lY3nMuJYkT11q_U6igPXB3Q9O_i8Vq_ecY_Z6BcPfwDmEV16EnjcEV6v3-l5aENVwzl6R2Zo40coHDVEywPAoDJyD",
+      name: "Ramesh Kumar",
+      craft: "electrical",
+      gender: "Male",
+      role: "Certified Master Electrician (10 yrs exp)",
+      rating: "4.80",
+      jobs: "210 jobs completed",
+      credential: "Delhi Co-op Guild #4102",
+      credentialIcon: "bolt",
+      skills: ["Switchboard & MCB Repair", "Ceiling Fan Installation", "House Rewiring"],
+      rateType: "hourly rate",
+      rate: "₹250",
+      hourlyRate: 250,
+      sakhiVerified: false,
+      area: "Connaught Place & Central Delhi",
+      image: "/illustrations/electrician.jpg",
     },
     {
       id: "w2",
       name: "Sunita Devi",
       craft: "cleaning",
-      role: "Deep Cleaning Specialist (8 yrs exp)",
-      rating: "4.96",
+      gender: "Female",
+      role: "Beautician & Deep Cleaning Lead (8 yrs exp)",
+      rating: "4.90",
       jobs: "420 jobs completed",
-      credential: "Women's Guild Lead",
+      credential: "♀ Sakhi Trust Lead Guild",
       credentialIcon: "award_star",
-      skills: ["Kitchen Deep Clean", "Eco Chemicals", "Balcony Scrubbing"],
-      rateType: "base rate",
-      rate: "₹499",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBx3bZtIOvkrmzU1IB_HpLaU24g-DoHISA3usNvoSySmiTrfRjKnCB-BZ0pOJf10x06Sj0LFsZQdGnvEEx5LpyWFF0jPb0ZtEfjXQT8ofSCOQCfatAicwvmNu-BhVu3X05Id1hub2nA0aIqQ_NdGLF2Uq-_y8HEYj4VUt8uAtSLQS6cYO1y4_47K3_lhh7WbW9hL61TCoLOiKvVH2UdwS8nZrvbpdqXUe3S_ytlb3wbnmsh63xD_x5P",
+      skills: ["Skin & Hair Care", "Full Home Sanitization", "Eco Chemicals"],
+      rateType: "hourly rate",
+      rate: "₹400",
+      hourlyRate: 400,
+      sakhiVerified: true,
+      area: "South Delhi & Noida Sector 62",
+      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=250&auto=format&fit=crop&q=80",
     },
     {
       id: "w3",
-      name: "Arun V. Nair",
-      craft: "electrical",
-      role: "Licensed Electrician & Wireman",
-      rating: "4.88",
-      jobs: "195 jobs completed",
-      credential: "Govt Wireman Certified",
-      credentialIcon: "bolt",
-      skills: ["Short Circuit Fix", "MCB Installation", "Inverter Wiring"],
-      rateType: "callout fee",
-      rate: "₹249",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDpGcH2m6LYp_L9jB1K9F7XCAzu9JxxYHgqMBvdMRcMYGYoNQ-vuMAQfinYPp7esxMJiyuxVVdELqL8p66zGzvqDmok8VuStHzHQFqSnYlKtelD1KkVFyTkGQyzHfNN9xgZ_NeJEL5Wm6vKoeobhkQZyMWLZdqhZDQ5savHG8mekHkDTcTdlq8bi431ORaXUNSLPapigBk21sYcP0pskayAET-F6lxoJP1QLFtAUzdOGL5i5bcyN7uy",
+      name: "Ali Raza",
+      craft: "carpentry",
+      gender: "Male",
+      role: "Woodcraft & Modular Furniture Specialist (12 yrs exp)",
+      rating: "4.50",
+      jobs: "165 jobs completed",
+      credential: "Co-op Woodcraft Guild",
+      credentialIcon: "construction",
+      skills: ["Door Locks & Handles", "Custom Cupboards", "Bed & Table Assembly"],
+      rateType: "hourly rate",
+      rate: "₹350",
+      hourlyRate: 350,
+      sakhiVerified: false,
+      area: "Gurugram Cyber City & DLF Phase 2",
+      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80",
     },
     {
       id: "w4",
-      name: "Mohammed Farhan",
-      craft: "carpentry",
-      role: "Furniture & Woodwork Carpenter",
-      rating: "4.90",
-      jobs: "160 jobs completed",
-      credential: "Co-op Guild Craftsman",
-      credentialIcon: "construction",
-      skills: ["Hinges & Locks", "Custom Shelving", "Door Realignment"],
-      rateType: "visiting charge",
-      rate: "₹349",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDttoC6oVuk-88XfJZ2nIikZJs-Vb26l_Y1nN2B4taLU-jyufmMV7K8qSA4Eap3Zq0yIMB4-Lh9YFd_gaBz7MFFucUvvGPr6CQtIn7PpB4QgFAted_Z9GG1ywQpVqUtGZN1P9lvuRSCGK2-lvJ9LJ072Hw3qrPaYO7bl7xoXyWnRtqx8TTNLg2iyMjyzNybITkPVvZKtcqmz_BWtvRbPKhjZycAbWjIOgaPiYAihCoFjVPVyg-cY7XL",
+      name: "Priya Sharma",
+      craft: "appliance",
+      gender: "Female",
+      role: "ITI Appliance & AC Maintenance Technician (7 yrs exp)",
+      rating: "4.70",
+      jobs: "190 jobs completed",
+      credential: "♀ Sakhi Certified Technician",
+      credentialIcon: "verified",
+      skills: ["AC Jet Wash", "Refrigerator Gas Check", "Washing Machine Drum Fix"],
+      rateType: "hourly rate",
+      rate: "₹300",
+      hourlyRate: 300,
+      sakhiVerified: true,
+      area: "Rohini & North Delhi",
+      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=250&auto=format&fit=crop&q=80",
     },
     {
       id: "w5",
-      name: "Meenakshi Sundaram",
-      craft: "cooking",
-      role: "Home Cook & Meal Prep Specialist",
-      rating: "4.95",
-      jobs: "280 jobs completed",
-      credential: "FSSAI Hygiene Certified",
-      credentialIcon: "restaurant",
-      skills: ["North/South Indian", "Party Meals", "Low-Oil Diet"],
-      rateType: "/ 2 meals",
-      rate: "₹500",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuBioy9ew74UbITNWkkCYICLGE6BDrWpLvybuaP6SKIeqeNRsj-614oomwBlPAEYDWz_PW_TBcQmGiZRsgea1IqxVcUR58QTKZeHg3ESri8Q2k4n9CepE3VmwPBcRfawv_tO3HyXfHEGPtuvraDhYT4LiZvuWKCE-THtNUvkVsdjF5FCzn0G2bpO9wHxydVHIXITT0kXtOENAK8rKMvbfzwb4A6tywTD4sOQ7CfWGcEWy_rdfVDiA2yP",
+      name: "Vikram Singh",
+      craft: "plumbing",
+      gender: "Male",
+      role: "Senior Master Plumber (9 yrs exp)",
+      rating: "4.60",
+      jobs: "318 jobs completed",
+      credential: "Delhi Plumber Co-op #2910",
+      credentialIcon: "plumbing",
+      skills: ["Pipe Leakage", "Kitchen Sink Clearing", "Overhead Tank Pump"],
+      rateType: "hourly rate",
+      rate: "₹200",
+      hourlyRate: 200,
+      sakhiVerified: false,
+      area: "Noida Sector 18 & Indirapuram",
+      image: "/illustrations/plumber.jpg",
     },
     {
       id: "w6",
-      name: "Vikram Jadhav",
-      craft: "electrical",
-      role: "Appliance & AC Technician",
-      rating: "4.85",
-      jobs: "142 jobs completed",
-      credential: "Co-op Safety Certified",
-      credentialIcon: "security",
-      skills: ["PCB Diagnostics", "Gas Refill", "Deep Foam Wash"],
-      rateType: "diagnostic fee",
-      rate: "₹399",
-      image:
-        "https://lh3.googleusercontent.com/aida-public/AB6AXuDraV3l21wZjUKStRWkznSj-tI4g7Fd4EnxSoXcLKpv9zobJ89g_JXFo4bmR2jNUFd7RmAo8n-MllGvh1v0-vvtnoNNyaTQAWTHpazr60Qveoq0lHxwRQQViG2RDCRX5HksLHyOGjBQhUP7si0-QG3ZKXL3XirTcSsRYhBzpXrO_8x7zx67MisJizaikX4OdtfufSM02ouX9COB-0lnx13VNe0QCVlR1YMGr1Nkfpt9lGvxwKH7YDcG",
+      name: "Meenakshi Sundaram",
+      craft: "cooking",
+      gender: "Female",
+      role: "Home Chef & Regional Meal Prep Specialist",
+      rating: "4.95",
+      jobs: "280 jobs completed",
+      credential: "♀ Sakhi Hygiene Certified",
+      credentialIcon: "restaurant",
+      skills: ["North/South Indian", "Party Meals", "Low-Oil Diet"],
+      rateType: "hourly rate",
+      rate: "₹350",
+      hourlyRate: 350,
+      sakhiVerified: true,
+      area: "Saket & South Delhi",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80",
     },
   ];
 
@@ -163,9 +186,8 @@ export default function FindHelp({ onNavigate }) {
       electrical: "Electrician",
       cleaning: "Domestic help",
       carpentry: "Carpenter",
+      appliance: "Appliance",
       cooking: "Home Cooking",
-      driver: "Driver",
-      gardener: "Gardener",
     };
     const targetSkill = skillMap[selectedCategory] || "";
     getWorkers(targetSkill)
@@ -175,8 +197,9 @@ export default function FindHelp({ onNavigate }) {
             const rawSkill = p.skills?.[0]?.toLowerCase() || "";
             const derivedCraft = rawSkill.includes("plumb") ? "plumbing"
               : rawSkill.includes("elect") ? "electrical"
-              : rawSkill.includes("clean") || rawSkill.includes("domestic") ? "cleaning"
+              : rawSkill.includes("clean") || rawSkill.includes("beaut") ? "cleaning"
               : rawSkill.includes("carp") ? "carpentry"
+              : rawSkill.includes("app") || rawSkill.includes("ac") ? "appliance"
               : rawSkill.includes("cook") ? "cooking"
               : "all";
 
@@ -186,30 +209,45 @@ export default function FindHelp({ onNavigate }) {
               name: p.userId?.name || "Verified Cooperative Tradesperson",
               craft: selectedCategory === "all" ? derivedCraft : selectedCategory,
               role: `${p.skills?.join(" • ") || "Master Tradesperson"}`,
-              rating: Number(p.ratingAvg || 4.92).toFixed(2),
+              rating: Number(p.ratingAvg || 4.85).toFixed(2),
               jobs: `${p.jobsCompleted || 120} jobs completed`,
               credential: "Co-op Verified Member",
               credentialIcon: "verified",
               skills: p.skills || [],
-              rateType: "co-op floor rate",
-              rate: "₹349",
-              image: p.photoUrl || "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
+              rateType: "standard rate",
+              rate: "₹300",
+              hourlyRate: 300,
+              sakhiVerified: Boolean(p.userId?.gender === "Female" || p.userId?.gender === "female"),
+              area: p.userId?.location?.area || "Delhi NCR",
+              image: p.photoUrl || "/illustrations/happy-customer.jpg",
             };
           });
           setApiWorkers(mapped);
         }
       })
       .catch((err) => {
-        console.warn("Workers fetch fallback to curated list:", err.message);
+        console.warn("Workers API fallback to curated list:", err.message);
       });
   }, [selectedCategory]);
 
   const activeWorkerList = apiWorkers.length > 0 ? apiWorkers : workers;
 
+  // Filter by craft category AND Sakhi Mode safety toggle
   const filteredWorkers = useMemo(() => {
-    if (selectedCategory === "all") return activeWorkerList;
-    return activeWorkerList.filter((w) => w.craft === selectedCategory || w.role?.toLowerCase()?.includes(selectedCategory));
-  }, [selectedCategory, activeWorkerList]);
+    let list = activeWorkerList;
+
+    if (selectedCategory !== "all") {
+      list = list.filter(
+        (w) => w.craft === selectedCategory || w.role?.toLowerCase()?.includes(selectedCategory)
+      );
+    }
+
+    if (sakhiMode) {
+      list = list.filter((w) => w.sakhiVerified === true);
+    }
+
+    return list;
+  }, [selectedCategory, sakhiMode, activeWorkerList]);
 
   const handleBook = (worker) => {
     onNavigate?.("booking", {
@@ -218,6 +256,21 @@ export default function FindHelp({ onNavigate }) {
       skills: [worker.role],
       price: worker.rate,
       prefilledDate: selectedDate.toISOString(),
+      trade: worker.role,
+      hourlyRate: worker.hourlyRate,
+      avatar: worker.image,
+      coopId: worker.credential,
+    });
+  };
+
+  const handleChat = (worker) => {
+    onNavigate?.("messages", {
+      name: worker.name,
+      trade: worker.role,
+      avatar: worker.image,
+      hourlyRate: worker.hourlyRate,
+      rating: worker.rating,
+      category: worker.craft,
     });
   };
 
@@ -226,14 +279,15 @@ export default function FindHelp({ onNavigate }) {
     setTimeout(() => {
       setLoadingMore(false);
       setAllLoaded(true);
-    }, 800);
+    }, 600);
   };
 
   return (
-    <div className="w-full bg-surface text-on-surface antialiased min-h-screen">
+    <div className="w-full bg-surface text-on-surface antialiased min-h-screen font-sans">
       <div className="flex flex-col w-full relative">
-        {/* Ambient Corner Grid Geometry */}
-        <div className="pointer-events-none absolute top-0 right-0 w-96 h-96 overflow-hidden opacity-[0.05] -z-10 select-none">
+        
+        {/* Subtle Ambient Jaali Geometry */}
+        <div className="pointer-events-none absolute top-0 right-0 w-96 h-96 overflow-hidden opacity-[0.04] -z-10 select-none">
           <svg className="text-primary-container" fill="none" height="400" viewBox="0 0 400 400" width="400">
             <defs>
               <pattern id="coop-jaali-grid-findhelp" patternUnits="userSpaceOnUse" width="40" height="40">
@@ -248,367 +302,366 @@ export default function FindHelp({ onNavigate }) {
 
         {/* Main Directory Container */}
         <div className="max-w-max-content-width mx-auto w-full px-margin-mobile md:px-margin-desktop py-space-8">
-          {/* Sub-header Breadcrumb & Operational Trust Strip */}
-          <div className="flex flex-wrap items-center justify-between gap-space-4 mb-space-6">
-            <div className="flex items-center gap-space-2 font-label-md text-label-md text-on-surface-variant">
-              <button
-                type="button"
-                onClick={() => onNavigate?.("home")}
-                className="hover:text-primary transition-colors bg-transparent border-none p-0 cursor-pointer text-on-surface-variant font-label-md"
-              >
-                Federation
-              </button>
-              <span>/</span>
-              <span className="text-primary font-semibold">Verified Guild Directory</span>
-              <span className="w-1.5 h-1.5 rounded-full bg-secondary-container inline-block" />
-              <span className="text-secondary font-medium">Delhi NCR Central Hub • Connaught Place</span>
+          
+          {/* Header Section */}
+          <div className="flex flex-col gap-space-2 mb-space-8">
+            <div className="flex items-center gap-space-2 text-primary font-label-sm text-label-sm uppercase tracking-wider">
+              <span className="inline-block w-2 h-2 rounded-full bg-secondary-container" />
+              <span>Verified Cooperative Worker Federation • Delhi NCR</span>
             </div>
-
-            {/* Live Collective Rate Guarantee Pill */}
-            <div className="flex items-center gap-space-2 px-space-3 py-space-1 bg-surface-container-high rounded-full shadow-sm text-on-surface">
-              <span className="material-symbols-outlined text-[16px] text-tertiary-container" style={{ fontVariationSettings: "'FILL' 1" }}>
-                verified_user
-              </span>
-              <span className="font-label-sm text-label-sm tracking-wide">
-                100% Worker-Owned • Minimum Floor Wage Protected
-              </span>
-            </div>
-          </div>
-
-          {/* Sticky Integrated Search & Filter Hub */}
-          <section className="sticky top-20 z-40 mb-space-8">
-            <div className="bg-surface-container-lowest rounded-2xl shadow-md p-space-4 border border-border-tone/40">
-              <form
-                className="grid grid-cols-1 lg:grid-cols-12 gap-space-3 items-center"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                }}
-              >
-                {/* Custom Service Category Picker Dropdown */}
-                <div ref={dropdownRef} className="relative lg:col-span-4">
-                  <button
-                    type="button"
-                    onClick={() => setIsServiceDropdownOpen((prev) => !prev)}
-                    className="w-full flex items-center justify-between bg-surface-container-low hover:bg-surface-container rounded-full px-space-4 py-space-2 cursor-pointer transition-colors border-none text-left select-none"
-                    aria-haspopup="listbox"
-                    aria-expanded={isServiceDropdownOpen}
-                  >
-                    <div className="flex items-center min-w-0 flex-1">
-                      <span className="material-symbols-outlined text-primary text-[20px] mr-space-2 shrink-0">
-                        {activeService.icon}
-                      </span>
-                      <div className="flex flex-col min-w-0 flex-1">
-                        <span className="font-label-sm text-label-sm text-on-surface-variant leading-none">
-                          Service Type
-                        </span>
-                        <span className="font-body-md text-body-md text-on-surface font-semibold truncate pt-0.5">
-                          {activeService.label}
-                        </span>
-                      </div>
-                    </div>
-                    <span
-                      className={`material-symbols-outlined text-[20px] transition-transform duration-200 shrink-0 ml-1 ${
-                        isServiceDropdownOpen ? "rotate-180 text-primary" : "text-on-surface-variant"
-                      }`}
-                    >
-                      expand_more
-                    </span>
-                  </button>
-
-                  {/* Custom Dropdown Options Listbox Floating Menu */}
-                  {isServiceDropdownOpen && (
-                    <div
-                      role="listbox"
-                      className="absolute top-[calc(100%+8px)] left-0 right-0 w-full min-w-[270px] bg-surface-container-lowest border border-surface-container-high rounded-2xl shadow-[0_16px_36px_rgba(0,53,72,0.18)] z-[100] py-2 overflow-hidden"
-                      style={{ backdropFilter: "blur(12px)" }}
-                    >
-                      <div className="px-3.5 py-1.5 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider border-b border-surface-container-high/60 mb-1">
-                        Select Cooperative Trade
-                      </div>
-                      {serviceOptions.map((opt) => {
-                        const isSelected = selectedCategory === opt.id;
-                        return (
-                          <div
-                            key={opt.id}
-                            role="option"
-                            aria-selected={isSelected}
-                            onClick={() => {
-                              setSelectedCategory(opt.id);
-                              setIsServiceDropdownOpen(false);
-                            }}
-                            className={`w-full flex items-center justify-between px-3.5 py-2.5 text-left transition-colors cursor-pointer ${
-                              isSelected
-                                ? "bg-secondary-container/10 text-secondary font-bold"
-                                : "text-on-surface hover:bg-surface-container-low"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span
-                                className={`material-symbols-outlined text-[18px] ${
-                                  isSelected ? "text-secondary" : "text-primary"
-                                }`}
-                              >
-                                {opt.icon}
-                              </span>
-                              <span className="font-body-md text-body-md truncate">{opt.label}</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 shrink-0 pl-2">
-                              <span className="text-[11px] font-semibold text-on-surface-variant/80">
-                                {opt.count}
-                              </span>
-                              {isSelected && (
-                                <span className="material-symbols-outlined text-[16px] text-secondary">
-                                  check
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-
-                {/* Location Field */}
-                <div className="lg:col-span-3 flex items-center bg-surface-container-low rounded-full px-space-4 py-space-2">
-                  <span className="material-symbols-outlined text-secondary text-[20px] mr-space-2">location_on</span>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="locationInput">
-                      Locality / Pincode
-                    </label>
-                    <input
-                      id="locationInput"
-                      type="text"
-                      value={searchLocation}
-                      onChange={(e) => setSearchLocation(e.target.value)}
-                      className="bg-transparent font-body-md text-body-md text-on-surface focus:outline-none truncate border-none pt-0.5"
-                    />
-                  </div>
-                </div>
-
-                {/* Date & Time Slot */}
-                <div className="lg:col-span-3 flex items-center bg-surface-container-low rounded-full px-space-4 py-space-2">
-                  <span className="material-symbols-outlined text-primary text-[20px] mr-space-2">calendar_today</span>
-                  <div className="flex flex-col flex-1 min-w-0">
-                    <label className="font-label-sm text-label-sm text-on-surface-variant leading-none" htmlFor="timeSlotInput">
-                      {t("findHelp.serviceWindow", "Service Window")}
-                    </label>
-                    <DatePicker
-                      id="timeSlotInput"
-                      selected={selectedDate}
-                      onChange={(date) => setSelectedDate(date || new Date())}
-                      showTimeSelect
-                      timeFormat="h:mm aa"
-                      timeIntervals={30}
-                      dateFormat="EEE, d MMM · h:mm aa"
-                      minDate={new Date()}
-                      className="bg-transparent font-body-md text-body-md text-on-surface focus:outline-none truncate border-none pt-0.5 w-full cursor-pointer"
-                    />
-                  </div>
-                </div>
-
-                {/* Action CTA */}
-                <div className="lg:col-span-2 flex items-center justify-end">
-                  <button
-                    type="submit"
-                    className="w-full h-12 inline-flex items-center justify-center gap-space-2 px-space-4 bg-primary-container text-on-primary font-label-lg text-label-lg rounded-full shadow-sm hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer font-bold"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">tune</span>
-                    <span>Filter Workers</span>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </section>
-
-          {/* Category Filter Chips Horizontal Scroller & Voice Search */}
-          <section aria-label="Craft Categories" className="mb-space-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-space-4">
-            <div className="flex items-center gap-space-2 overflow-x-auto pb-space-2 min-w-0 flex-1">
-              {categoryChips.map((chip) => {
-                const isActive = selectedCategory === chip.id;
-                return (
-                  <button
-                    key={chip.id}
-                    type="button"
-                    onClick={() => setSelectedCategory(chip.id)}
-                    className={`px-space-4 py-space-2 rounded-full font-label-md text-label-md transition-all shadow-sm border-none cursor-pointer shrink-0 ${
-                      isActive
-                        ? "bg-primary-container text-on-primary font-bold"
-                        : "bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container"
-                    }`}
-                  >
-                    {chip.label}
-                  </button>
-                );
-              })}
-            </div>
-            <VoiceAssistant onServiceDetected={(cat) => setSelectedCategory(cat)} className="shrink-0" />
-          </section>
-
-          {/* Cooperative Transparency Banner */}
-          <div className="bg-surface-container rounded-xl p-space-4 mb-space-8 flex flex-col md:flex-row items-start md:items-center justify-between gap-space-4 shadow-sm">
-            <div className="flex items-center gap-space-3">
-              <div className="w-10 h-10 rounded-full bg-primary-container text-on-primary flex items-center justify-center shrink-0">
-                <span className="material-symbols-outlined text-[22px]">balance</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-title-md text-title-md text-primary font-bold">100% Zero-Commission Guarantee</span>
-                <span className="font-body-sm text-body-sm text-on-surface-variant">
-                  Your payment goes straight to verified cooperative members. Platform expenses are democratically funded via member dividends.
-                </span>
-              </div>
-            </div>
-            <div className="flex items-center gap-space-3 shrink-0">
-              <span className="font-label-sm text-label-sm px-space-3 py-space-1 bg-surface-container-lowest rounded-full text-on-surface font-semibold shadow-sm">
-                Average Arrival: 32 mins
-              </span>
-            </div>
-          </div>
-
-          {/* Worker Profile Grid (3 Columns) */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-6" id="workerCardsGrid">
-            {filteredWorkers.map((worker) => (
-              <article
-                key={worker.id}
-                className="bg-surface-container-lowest rounded-2xl p-space-6 shadow-sm hover:shadow-md hover:-translate-y-1 transition-all flex flex-col justify-between border border-border-tone/30"
-              >
-                <div>
-                  {/* Top Row: Photo, Badges, Header info */}
-                  <div className="flex items-start gap-space-4 mb-space-4">
-                    <div className="relative shrink-0">
-                      <img className="w-16 h-16 rounded-full object-cover shadow-inner" src={worker.image} alt={worker.name} />
-                      <span className="absolute -bottom-1 -right-1 w-5 h-5 bg-on-tertiary-container text-on-tertiary rounded-full flex items-center justify-center text-[12px] shadow-sm font-bold">
-                        ✓
-                      </span>
-                    </div>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-space-1">
-                        <h3 className="font-title-md text-title-md text-on-surface font-bold truncate m-0">{worker.name}</h3>
-                      </div>
-                      <p className="font-body-sm text-body-sm text-on-surface-variant font-medium mt-1 mb-0">{worker.role}</p>
-                      <div className="flex items-center gap-space-1 mt-space-1 text-secondary">
-                        <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: "'FILL' 1" }}>
-                          star
-                        </span>
-                        <span className="font-label-md text-label-md font-bold text-on-surface">{worker.rating}</span>
-                        <span className="font-body-sm text-body-sm text-on-surface-variant">({worker.jobs})</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Credential Pills */}
-                  <div className="flex flex-wrap gap-space-2 mb-space-4">
-                    <span className="inline-flex items-center gap-space-1 px-space-3 py-1 bg-surface-container-high text-tertiary-container rounded-full font-label-sm text-label-sm font-bold">
-                      <span className="material-symbols-outlined text-[14px]">verified</span> Aadhaar Verified ✓
-                    </span>
-                    <span className="inline-flex items-center gap-space-1 px-space-3 py-1 bg-surface-container-low text-primary rounded-full font-label-sm text-label-sm font-semibold">
-                      <span className="material-symbols-outlined text-[14px]">{worker.credentialIcon}</span> {worker.credential}
-                    </span>
-                  </div>
-
-                  {/* Skill Badges */}
-                  <div className="flex flex-wrap gap-space-2 mb-space-6">
-                    {worker.skills.map((skill) => (
-                      <span key={skill} className="px-space-2 py-0.5 bg-surface-container text-on-surface-variant rounded font-label-sm text-label-sm">
-                        {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Bottom Row: Price & Booking Action */}
-                <div className="pt-space-4 bg-surface-container-low/50 -mx-space-6 -mb-space-6 p-space-6 rounded-b-2xl flex items-center justify-between mt-space-2 border-t border-border-tone/20">
-                  <div className="flex flex-col">
-                    <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">
-                      Floor Standard
-                    </span>
-                    <span className="font-headline-sm text-headline-sm text-primary font-bold">
-                      {worker.rate}{" "}
-                      <span className="font-body-sm text-body-sm font-normal text-on-surface-variant">
-                        {worker.rateType}
-                      </span>
-                    </span>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => handleBook(worker)}
-                    className="px-space-4 py-space-2 bg-secondary-container text-on-secondary font-label-lg text-label-lg rounded-full shadow-[0_4px_14px_rgba(253,101,30,0.3)] hover:opacity-95 active:scale-95 transition-all inline-flex items-center gap-space-1 font-bold border-none cursor-pointer"
-                  >
-                    <span>Book Now</span>
-                    <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-                  </button>
-                </div>
-              </article>
-            ))}
-          </div>
-
-          {/* Cooperative Escrow Trust Guarantee Footer Card */}
-          <div className="mt-space-12 p-space-6 bg-surface-container-low rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-space-6 border border-border-tone/30">
-            <div className="flex items-center gap-space-4">
-              <div className="w-12 h-12 rounded-2xl bg-surface-container-lowest flex items-center justify-center text-primary-container shadow-sm shrink-0">
-                <span className="material-symbols-outlined text-[28px]">lock</span>
-              </div>
-              <div className="flex flex-col">
-                <span className="font-title-md text-title-md text-on-surface font-bold">
-                  Aadhaar Bio-Authenticated Escrow Guarantee
-                </span>
-                <p className="font-body-sm text-body-sm text-on-surface-variant max-w-2xl m-0 mt-1">
-                  Funds remain held in your secure cooperative wallet until you confirm completion with your one-time digital signature. No hidden platform markups or arbitrary surges.
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-space-4">
+              <div>
+                <h1 className="font-headline-lg text-headline-lg text-on-surface m-0 font-extrabold tracking-tight">
+                  Book Skilled Trades &amp; Direct Services
+                </h1>
+                <p className="font-body-lg text-body-lg text-on-surface-variant m-0 mt-1">
+                  100% Aadhaar-verified karigars with zero middleman surge pricing.
                 </p>
               </div>
-            </div>
-            <div className="flex items-center gap-space-2 shrink-0">
-              <span className="material-symbols-outlined text-[20px] text-tertiary-container">verified</span>
-              <span className="font-label-sm text-label-sm font-bold text-on-surface">RBI Regulated Escrow</span>
+
+              {/* ================= FEATURE 2: SAKHI TRUST WOMEN'S SAFETY TOGGLE ================= */}
+              <div className="flex-shrink-0">
+                <div
+                  className={`p-3 rounded-2xl border transition-all duration-300 shadow-sm flex items-center justify-between gap-3 ${
+                    sakhiMode
+                      ? "bg-gradient-to-r from-pink-50 via-purple-50 to-pink-100/60 border-pink-300 ring-2 ring-pink-400/30 shadow-[0_4px_20px_rgba(236,72,153,0.15)]"
+                      : "bg-surface-container-low border-border-tone/40 hover:bg-surface-container"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5">
+                    <div
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-lg transition-colors ${
+                        sakhiMode
+                          ? "bg-pink-600 text-white shadow-md shadow-pink-500/30"
+                          : "bg-pink-100 text-pink-700"
+                      }`}
+                    >
+                      ♀
+                    </div>
+                    <div>
+                      <span className="font-label-md text-label-md text-slate-900 font-extrabold block leading-tight">
+                        Sakhi Mode
+                      </span>
+                      <span className="text-[11px] text-pink-700 font-semibold block">
+                        Women-to-Women / Verified Safe
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Toggle Switch Button */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={sakhiMode}
+                    onClick={() => setSakhiMode(!sakhiMode)}
+                    className={`w-12 h-7 rounded-full transition-colors relative cursor-pointer border-none p-0.5 flex items-center ${
+                      sakhiMode ? "bg-gradient-to-r from-pink-500 to-purple-600" : "bg-slate-300"
+                    }`}
+                  >
+                    <span
+                      className={`w-6 h-6 rounded-full bg-white shadow-md transform transition-transform duration-200 block ${
+                        sakhiMode ? "translate-x-5" : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Pagination / Load More Pill Button */}
-          <div className="flex flex-col items-center justify-center mt-space-12 mb-space-8">
-            <button
-              type="button"
-              id="loadMoreBtn"
-              onClick={handleLoadMore}
-              disabled={allLoaded}
-              className={`px-space-8 py-space-3 bg-surface-container-lowest text-primary-container font-label-lg text-label-lg rounded-full shadow-sm hover:bg-surface-container active:scale-95 transition-all flex items-center gap-space-2 border-none cursor-pointer ${
-                allLoaded ? "opacity-60 cursor-not-allowed" : ""
-              }`}
-            >
-              {loadingMore ? (
-                <>
-                  <span className="material-symbols-outlined text-[18px] animate-spin">refresh</span>
-                  <span>Fetching verified records...</span>
-                </>
-              ) : allLoaded ? (
-                <>
-                  <span className="material-symbols-outlined text-[18px]">done</span>
-                  <span>All Local Guilds Loaded</span>
-                </>
-              ) : (
-                <>
-                  <span className="material-symbols-outlined text-[18px]">expand_more</span>
-                  <span>Load 24 More Verified Workers</span>
-                </>
+          {/* Sakhi Mode Active Banner Notification */}
+          <AnimatePresence>
+            {sakhiMode && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, y: -10 }}
+                animate={{ opacity: 1, height: "auto", y: 0 }}
+                exit={{ opacity: 0, height: 0, y: -10 }}
+                className="mb-space-6 p-space-4 bg-gradient-to-r from-pink-50 via-purple-50 to-pink-50 border border-pink-200 rounded-2xl flex items-center justify-between gap-3 shadow-xs"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-pink-600 text-white flex items-center justify-center flex-shrink-0">
+                    <span className="material-symbols-outlined text-[18px]">verified_user</span>
+                  </div>
+                  <p className="text-xs text-pink-900 font-medium m-0 leading-relaxed">
+                    <strong>♀ Sakhi Trust Active:</strong> Filtering for verified female professionals and safety-audited service providers for comfortable, secure in-home service.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setSakhiMode(false)}
+                  className="text-xs font-bold text-pink-700 hover:text-pink-900 underline border-none bg-transparent cursor-pointer flex-shrink-0"
+                >
+                  Turn Off
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Search & Filter Bar */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-space-4 p-space-4 bg-surface-container-lowest rounded-2xl shadow-xl border border-border-tone/30 mb-space-8">
+            
+            {/* Service Category Dropdown */}
+            <div className="lg:col-span-4 relative" ref={dropdownRef}>
+              <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">
+                Selected Service
+              </label>
+              <button
+                type="button"
+                onClick={() => setIsServiceDropdownOpen(!isServiceDropdownOpen)}
+                className="w-full h-12 bg-surface-container-low px-4 rounded-xl flex items-center justify-between text-on-surface font-label-lg text-label-lg font-bold border border-transparent focus:border-primary cursor-pointer transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[20px]">
+                    {activeService.icon}
+                  </span>
+                  <span>{activeService.label}</span>
+                </div>
+                <span className="material-symbols-outlined text-outline">
+                  {isServiceDropdownOpen ? "expand_less" : "expand_more"}
+                </span>
+              </button>
+
+              {isServiceDropdownOpen && (
+                <div className="absolute top-full left-0 right-0 mt-2 bg-surface-container-lowest rounded-xl shadow-2xl border border-border-tone/40 py-2 z-50 animate-in fade-in zoom-in-95">
+                  {serviceOptions.map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategory(opt.id);
+                        setIsServiceDropdownOpen(false);
+                      }}
+                      className={`w-full px-4 py-2.5 flex items-center justify-between hover:bg-surface-container text-left border-none bg-transparent cursor-pointer ${
+                        selectedCategory === opt.id ? "bg-primary-container/10 text-primary font-bold" : "text-on-surface"
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[18px] text-primary">{opt.icon}</span>
+                        <span>{opt.label}</span>
+                      </div>
+                      <span className="text-xs text-on-surface-variant">{opt.count}</span>
+                    </button>
+                  ))}
+                </div>
               )}
-            </button>
-            <span className="font-label-sm text-label-sm text-on-surface-variant mt-space-2">
-              Showing {filteredWorkers.length} of 142 Cooperative Service Members in Delhi NCR
-            </span>
+            </div>
+
+            {/* Location Input */}
+            <div className="lg:col-span-4">
+              <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">
+                Service Location
+              </label>
+              <div className="relative flex items-center h-12 bg-surface-container-low px-4 rounded-xl border border-transparent focus-within:border-primary">
+                <span className="material-symbols-outlined text-primary text-[20px] mr-2">location_on</span>
+                <input
+                  type="text"
+                  value={searchLocation}
+                  onChange={(e) => setSearchLocation(e.target.value)}
+                  placeholder="Enter Delhi NCR locality / Pin"
+                  className="w-full bg-transparent text-sm text-on-surface font-semibold focus:outline-none border-none"
+                />
+              </div>
+            </div>
+
+            {/* Date Picker */}
+            <div className="lg:col-span-4">
+              <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">
+                Date &amp; Time
+              </label>
+              <div className="relative flex items-center h-12 bg-surface-container-low px-4 rounded-xl border border-transparent focus-within:border-primary [&>.react-datepicker-wrapper]:w-full">
+                <span className="material-symbols-outlined text-primary text-[20px] mr-2 pointer-events-none">
+                  calendar_month
+                </span>
+                <DatePicker
+                  selected={selectedDate}
+                  onChange={(date) => setSelectedDate(date)}
+                  showTimeSelect
+                  timeIntervals={30}
+                  minDate={new Date()}
+                  dateFormat="d MMM yyyy, h:mm aa"
+                  className="w-full bg-transparent text-sm text-on-surface font-semibold focus:outline-none border-none cursor-pointer"
+                />
+              </div>
+            </div>
+
           </div>
+
+          {/* Filter Chips & Voice Search */}
+          <div className="flex items-center justify-between gap-4 mb-space-8 overflow-x-auto no-scrollbar pb-1">
+            <div className="flex items-center gap-2">
+              {categoryChips.map((chip) => (
+                <button
+                  key={chip.id}
+                  type="button"
+                  onClick={() => setSelectedCategory(chip.id)}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all border-none cursor-pointer flex-shrink-0 ${
+                    selectedCategory === chip.id
+                      ? "bg-primary-container text-on-primary shadow-sm"
+                      : "bg-surface-container-low text-on-surface hover:bg-surface-container"
+                  }`}
+                >
+                  {chip.label}
+                </button>
+              ))}
+            </div>
+
+            <VoiceAssistant onServiceDetected={(cat) => setSelectedCategory(cat)} className="shrink-0" />
+          </div>
+
+          {/* ================= WORKER CARDS GRID ================= */}
+          {filteredWorkers.length === 0 ? (
+            <div className="py-16 text-center bg-surface-container-low rounded-3xl border border-border-tone/30">
+              <span className="material-symbols-outlined text-5xl text-outline mb-2">search_off</span>
+              <h3 className="text-lg font-bold text-on-surface m-0">No matching professionals found</h3>
+              <p className="text-sm text-on-surface-variant max-w-sm mx-auto mt-1 mb-4">
+                {sakhiMode
+                  ? "No ♀ Sakhi Verified professionals currently available in this specific category. Try viewing all categories or turn off Sakhi Mode."
+                  : "Try clearing search filters to see all available cooperative members."}
+              </p>
+              {sakhiMode && (
+                <button
+                  type="button"
+                  onClick={() => setSakhiMode(false)}
+                  className="px-5 py-2.5 bg-primary-container text-on-primary font-bold text-xs rounded-xl border-none cursor-pointer"
+                >
+                  View All Verified Workers
+                </button>
+              )}
+            </div>
+          ) : (
+            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-6">
+              <AnimatePresence>
+                {filteredWorkers.map((w) => (
+                  <motion.div
+                    key={w.id}
+                    layout
+                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.96 }}
+                    transition={{ duration: 0.25 }}
+                    className={`rounded-2xl p-space-5 transition-all flex flex-col justify-between ${
+                      w.sakhiVerified
+                        ? "bg-gradient-to-br from-white via-pink-50/20 to-purple-50/15 border border-pink-300 ring-2 ring-pink-400/40 shadow-[0_6px_24px_rgba(236,72,153,0.12)] hover:-translate-y-1"
+                        : "bg-surface-container-lowest border border-border-tone/30 shadow-md hover:shadow-xl hover:-translate-y-1"
+                    }`}
+                  >
+                    <div>
+                      {/* Top Badges */}
+                      <div className="flex items-center justify-between gap-2 mb-space-3">
+                        {w.sakhiVerified ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-[11px] font-extrabold shadow-xs">
+                            <span>♀</span> Sakhi Verified Safe
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container-low text-primary border border-border-tone/30 rounded-xl text-[11px] font-bold">
+                            <span className="material-symbols-outlined text-[14px]">verified</span> Co-op Certified
+                          </span>
+                        )}
+
+                        <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">
+                          {w.area || "Delhi NCR"}
+                        </span>
+                      </div>
+
+                      {/* Profile Details */}
+                      <div className="flex items-start gap-space-4 mb-space-4">
+                        <img
+                          src={w.image}
+                          alt={w.name}
+                          className={`w-16 h-16 rounded-2xl object-cover flex-shrink-0 ${
+                            w.sakhiVerified ? "ring-2 ring-pink-400 border border-white shadow-md" : "border border-gray-200 shadow-sm"
+                          }`}
+                        />
+                        <div className="min-w-0">
+                          <h3 className="font-title-lg text-title-lg text-on-surface font-extrabold m-0 truncate">
+                            {w.name}
+                          </h3>
+                          <p className="font-body-sm text-body-sm text-on-surface-variant m-0 mt-0.5 line-clamp-1">
+                            {w.role}
+                          </p>
+                          <div className="flex items-center gap-2 mt-1.5">
+                            <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
+                              <span>★</span>
+                              <span>{w.rating}</span>
+                            </div>
+                            <span className="text-[11px] text-on-surface-variant">{w.jobs}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Skill tags */}
+                      <div className="flex flex-wrap gap-1.5 mb-space-4">
+                        {w.skills?.map((skill, idx) => (
+                          <span
+                            key={idx}
+                            className="px-2 py-1 bg-surface-container-low text-on-surface text-[11px] font-medium rounded-lg"
+                          >
+                            {skill}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bottom Pricing & Action Buttons */}
+                    <div className="pt-space-3 border-t border-border-tone/20">
+                      <div className="flex items-center justify-between mb-space-3">
+                        <div>
+                          <span className="text-[11px] text-on-surface-variant block uppercase font-bold tracking-wider">
+                            Fair Cooperative Tariff
+                          </span>
+                          <span className="font-headline-sm text-headline-sm font-black text-primary">
+                            {w.rate}
+                            <span className="text-xs font-normal text-on-surface-variant"> / hr (0% surge)</span>
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleChat(w)}
+                          className="py-2.5 px-3 rounded-xl bg-surface-container-high hover:bg-surface-container text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-all border-none cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
+                          <span>Chat &amp; Fair-Bid</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => handleBook(w)}
+                          className="py-2.5 px-3 rounded-xl bg-secondary-container hover:opacity-95 active:scale-95 text-on-secondary font-bold text-xs flex items-center justify-center gap-1 shadow-md transition-all border-none cursor-pointer"
+                        >
+                          <span className="material-symbols-outlined text-[16px]">calendar_month</span>
+                          <span>Book Service</span>
+                        </button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          )}
+
+          {/* Load More Trigger */}
+          <div className="mt-space-12 text-center">
+            {!allLoaded ? (
+              <button
+                type="button"
+                onClick={handleLoadMore}
+                disabled={loadingMore}
+                className="px-space-8 py-space-3 bg-surface-container-low hover:bg-surface-container text-on-surface font-label-md text-label-md font-bold rounded-xl shadow-sm transition-all border border-border-tone/40 cursor-pointer"
+              >
+                {loadingMore ? "Loading more verified federation pros..." : "Load More Co-op Tradespeople"}
+              </button>
+            ) : (
+              <span className="text-xs text-on-surface-variant font-medium">
+                ✓ Showing all available active cooperative guild members in Delhi NCR.
+              </span>
+            )}
+          </div>
+
         </div>
       </div>
-
-      {/* Floating 24x7 Help Button */}
-      <aside className="fixed bottom-6 left-6 z-50">
-        <button
-          className="flex items-center gap-space-2 px-space-4 py-space-2 bg-primary-container text-on-primary font-label-md text-label-md rounded-full shadow-lg hover:opacity-95 active:scale-95 transition-all border-none cursor-pointer"
-          type="button"
-          onClick={() => onNavigate?.("admin")}
-        >
-          <span className="material-symbols-outlined text-[18px]">chat</span>
-          <span>Need Help? | 24x7 Cooperative Sahayata</span>
-        </button>
-      </aside>
     </div>
   );
 }
