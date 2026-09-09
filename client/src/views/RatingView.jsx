@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { submitRating } from "../api";
 import { showToast } from "../toast";
+import { DEFAULT_FEMALE_AVATAR } from "../assets/avatars";
 
 export default function RatingView({ booking, onNavigate }) {
   const activeBooking = booking || {
@@ -13,7 +14,7 @@ export default function RatingView({ booking, onNavigate }) {
       name: "Sunita Devi",
       role: "Lead Sanitation Specialist & Guild Steward",
       sakhiVerified: true,
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
   };
 

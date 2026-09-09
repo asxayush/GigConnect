@@ -3,6 +3,7 @@ import { io } from "socket.io-client";
 import { useTranslation } from "react-i18next";
 import { showToast } from "../../toast";
 import { API_URL } from "../../api";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 const BACKEND_URL = API_URL;
 
@@ -50,7 +51,7 @@ const DEFAULT_CHATS = [
     gender: "Male",
     hourlyRate: 250,
     sakhiVerified: false,
-    avatar: "/illustrations/electrician.jpg",
+    avatar: DEFAULT_MALE_AVATAR,
     status: "online",
     verified: true,
     rating: 4.8,
@@ -93,7 +94,7 @@ const DEFAULT_CHATS = [
     gender: "Female",
     hourlyRate: 400,
     sakhiVerified: true,
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=250&auto=format&fit=crop&q=80",
+    avatar: DEFAULT_FEMALE_AVATAR,
     status: "online",
     verified: true,
     rating: 4.9,
@@ -128,7 +129,7 @@ const DEFAULT_CHATS = [
     gender: "Male",
     hourlyRate: 350,
     sakhiVerified: false,
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80",
+    avatar: DEFAULT_MALE_AVATAR,
     status: "last seen today at 9:15 AM",
     verified: true,
     rating: 4.5,
@@ -155,7 +156,7 @@ const DEFAULT_CHATS = [
     gender: "Female",
     hourlyRate: 300,
     sakhiVerified: true,
-    avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=250&auto=format&fit=crop&q=80",
+    avatar: DEFAULT_FEMALE_AVATAR,
     status: "last seen today at 8:40 AM",
     verified: true,
     rating: 4.7,
@@ -182,7 +183,7 @@ const DEFAULT_CHATS = [
     gender: "Male",
     hourlyRate: 200,
     sakhiVerified: false,
-    avatar: "/illustrations/plumber.jpg",
+    avatar: DEFAULT_MALE_AVATAR,
     status: "online",
     verified: true,
     rating: 4.6,

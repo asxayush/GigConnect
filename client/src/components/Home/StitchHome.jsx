@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import WorkerRadarMap from "../Map/WorkerRadarMap";
 import { showToast } from "../../toast";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function StitchHome({ onNavigate }) {
   const { t } = useTranslation();
@@ -27,8 +28,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹600/day",
       lat: 28.6315,
       lng: 77.2167,
-      image:
-        "https://images.unsplash.com/photo-1540569014015-19a7be504e3a?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w2",
@@ -49,8 +49,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹450/visit",
       lat: 28.4952,
       lng: 77.0895,
-      image:
-        "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w3",
@@ -71,8 +70,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹800/day",
       lat: 28.628,
       lng: 77.3649,
-      image:
-        "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w4",
@@ -93,8 +91,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹350/service",
       lat: 28.5245,
       lng: 77.2066,
-      image:
-        "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w5",
@@ -115,8 +112,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹500/day",
       lat: 28.6415,
       lng: 77.3712,
-      image:
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w6",
@@ -137,8 +133,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹750/day",
       lat: 28.4089,
       lng: 77.3178,
-      image:
-        "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w7",
@@ -159,8 +154,7 @@ export default function StitchHome({ onNavigate }) {
       fixedPrice: "₹450/service",
       lat: 28.652,
       lng: 77.1906,
-      image:
-        "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=400&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
   ];
 

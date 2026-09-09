@@ -7,8 +7,9 @@ import { fileURLToPath } from "url";
 import Worker from "../models/Worker.js";
 import User from "../models/User.js";
 import WorkerProfile from "../models/WorkerProfile.js";
+import Booking from "../models/Booking.js";
 
-// Ensure Node.js DNS resolver handles Atlas SRV records smoothly on Windows
+// Ensure Node.js DNS resolver handles Atlas SRV records smoothly
 dns.setServers(["8.8.8.8", "1.1.1.1"]);
 
 const __filename = fileURLToPath(import.meta.url);
@@ -20,298 +21,271 @@ const MONGO_URI =
   process.env.MONGODB_URI ||
   "mongodb://127.0.0.1:27017/gigconnect";
 
-const DEFAULT_PASSWORD_PLAIN = "Demo@123";
+const DEMO_PASSWORD_PLAIN = "Demo@123";
+const MOCK_GOVT_ID = "XXXX-XXXX-1234";
 
-const SEED_WORKERS_DATA = [
+/**
+ * EXACT 6 WORKERS SPECIFICATION FOR SIH PROTOTYPE
+ */
+const SIX_DEMO_WORKERS = [
   {
     name: "Ramesh Kumar",
-    phone: "9999999991",
+    phone: "9811000001",
+    email: "ramesh.kumar@gigconnect.coop",
     trade: "Electrician",
-    gender: "Male",
-    hourlyRate: 250,
-    rating: 4.8,
-    sakhiVerified: false,
-    lng: 77.2090,
-    lat: 28.6139,
-    area: "Connaught Place, Central Delhi",
-    aadhaarNumberMasked: "XXXX-XXXX-1101",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "/illustrations/electrician.jpg",
-  },
-  {
-    name: "Sunita Devi",
-    phone: "9999999992",
-    trade: "Cleaner",
-    gender: "Female",
-    hourlyRate: 400,
-    rating: 4.9,
-    sakhiVerified: true,
-    lng: 77.2588,
-    lat: 28.5355,
-    area: "South Delhi & Saket Hub",
-    aadhaarNumberMasked: "XXXX-XXXX-2202",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Ali Raza",
-    phone: "9999999993",
-    trade: "Carpenter",
-    gender: "Male",
-    hourlyRate: 350,
-    rating: 4.5,
-    sakhiVerified: false,
-    lng: 77.2784,
-    lat: 28.6276,
-    area: "East Delhi & Laxmi Nagar",
-    aadhaarNumberMasked: "XXXX-XXXX-3303",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Priya Sharma",
-    phone: "9999999994",
-    trade: "Technician",
-    gender: "Female",
-    hourlyRate: 300,
-    rating: 4.7,
-    sakhiVerified: true,
-    lng: 77.1025,
-    lat: 28.7041,
-    area: "Rohini Sector 14, North Delhi",
-    aadhaarNumberMasked: "XXXX-XXXX-4404",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Vikram Singh",
-    phone: "9999999995",
-    trade: "Plumber",
-    gender: "Male",
-    hourlyRate: 200,
-    rating: 4.6,
-    sakhiVerified: false,
-    lng: 77.0266,
-    lat: 28.4595,
-    area: "Gurugram Cyber City & DLF",
-    aadhaarNumberMasked: "XXXX-XXXX-5505",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "/illustrations/plumber.jpg",
-  },
-  {
-    name: "Kavita Rao",
-    phone: "9999999996",
-    trade: "Domestic Helper",
-    gender: "Female",
-    hourlyRate: 200,
-    rating: 4.92,
-    sakhiVerified: true,
-    lng: 77.0500,
-    lat: 28.5800,
-    area: "Dwarka Sector 10, West Delhi",
-    aadhaarNumberMasked: "XXXX-XXXX-6606",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Shanti Devi",
-    phone: "9999999997",
-    trade: "Caregiver",
-    gender: "Female",
-    hourlyRate: 350,
-    rating: 4.98,
-    sakhiVerified: true,
-    lng: 77.1550,
-    lat: 28.5200,
-    area: "Vasant Kunj & South Delhi",
-    aadhaarNumberMasked: "XXXX-XXXX-7707",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Rajeshwar Yadav",
-    phone: "9999999998",
-    trade: "Painter",
-    gender: "Male",
-    hourlyRate: 300,
-    rating: 4.75,
-    sakhiVerified: false,
-    lng: 77.2900,
-    lat: 28.6300,
-    area: "Laxmi Nagar & East Delhi",
-    aadhaarNumberMasked: "XXXX-XXXX-8808",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Harish Chandra",
-    phone: "9999999999",
-    trade: "Driver",
-    gender: "Male",
-    hourlyRate: 350,
-    rating: 4.88,
-    sakhiVerified: false,
-    lng: 77.0300,
-    lat: 28.4700,
-    area: "Gurugram & Delhi NCR",
-    aadhaarNumberMasked: "XXXX-XXXX-9909",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=250&auto=format&fit=crop&q=80",
-  },
-  {
-    name: "Babulal Saini",
-    phone: "9999999910",
-    trade: "Gardener",
     gender: "Male",
     hourlyRate: 250,
     rating: 4.85,
     sakhiVerified: false,
-    lng: 77.2400,
-    lat: 28.5500,
-    area: "Greater Kailash & South Delhi",
-    aadhaarNumberMasked: "XXXX-XXXX-1010",
-    aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
-    selfieImageUrl: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=250&auto=format&fit=crop&q=80",
+    status: "verified", // Verified
+    locationCoords: [77.2090, 28.6139], // [lng, lat]
+    area: "Connaught Place, Central Delhi",
+    skills: ["Electrician", "Switchboard Repair", "MCB Wiring", "Inverter Setup"],
+  },
+  {
+    name: "Sunita Devi",
+    phone: "9811000002",
+    email: "sunita.devi@gigconnect.coop",
+    trade: "Beautician",
+    gender: "Female",
+    hourlyRate: 400,
+    rating: 4.96,
+    sakhiVerified: true,
+    status: "verified", // Verified
+    locationCoords: [77.2588, 28.5355], // [lng, lat]
+    area: "Saket & South Delhi",
+    skills: ["Beautician", "Bridal Makeup", "Herbal Facial", "Skin Care"],
+  },
+  {
+    name: "Priya Sharma",
+    phone: "9811000003",
+    email: "priya.sharma@gigconnect.coop",
+    trade: "Plumber",
+    gender: "Female",
+    hourlyRate: 300,
+    rating: 4.90,
+    sakhiVerified: true,
+    status: "verified", // Verified
+    locationCoords: [77.1025, 28.7041], // [lng, lat]
+    area: "Rohini Sector 14, North Delhi",
+    skills: ["Plumber", "Pipe Fitting", "Leakage Repair", "Sanitary Fitting"],
+  },
+  {
+    name: "Kavita Rao",
+    phone: "9811000004",
+    email: "kavita.rao@gigconnect.coop",
+    trade: "Domestic Help",
+    gender: "Female",
+    hourlyRate: 200,
+    rating: 4.80,
+    sakhiVerified: true,
+    status: "verified", // Verified
+    locationCoords: [77.0266, 28.4595], // [lng, lat]
+    area: "Cyber City, Gurugram",
+    skills: ["Domestic Help", "Deep Cleaning", "Meal Prep", "Elder Care"],
+  },
+  {
+    name: "Meenakshi",
+    phone: "9811000005",
+    email: "meenakshi@gigconnect.coop",
+    trade: "Carpenter",
+    gender: "Female",
+    hourlyRate: 350,
+    rating: 4.75,
+    sakhiVerified: true,
+    status: "verified", // Verified
+    locationCoords: [77.2784, 28.6276], // [lng, lat]
+    area: "Laxmi Nagar, East Delhi",
+    skills: ["Carpenter", "Furniture Assembly", "Door Lock Repair", "Modular Fitting"],
+  },
+  {
+    name: "Vikram Singh",
+    phone: "9811000006",
+    email: "vikram.singh@gigconnect.coop",
+    trade: "Painter",
+    gender: "Male",
+    hourlyRate: 200,
+    rating: 4.50,
+    sakhiVerified: false,
+    status: "unverified", // status: 'unverified'
+    locationCoords: [77.3910, 28.5355], // [lng, lat]
+    area: "Sector 62, Noida",
+    skills: ["Painter", "Wall Distemper", "Waterproofing", "Texture Paint"],
   },
 ];
 
-async function seedWorkers() {
+const DEMO_CUSTOMER = {
+  name: "Ayush Sharma",
+  phone: "9876543210",
+  email: "customer.demo@gigconnect.in",
+  role: "customer",
+  gender: "Male",
+  location: {
+    lat: 28.6139,
+    lng: 77.2090,
+    area: "Connaught Place, New Delhi",
+  },
+};
+
+async function seedDatabase() {
   console.log("=================================================");
-  console.log("🚀 [GigConnect] Starting Database Worker Reset...");
+  console.log("🚀 Starting GigConnect Database Reset & Seed Script");
+  console.log(`📡 Connecting to MongoDB at: ${MONGO_URI.split("@").pop()}`);
   console.log("=================================================");
 
   try {
-    // 1. Connect to MongoDB
-    console.log("⏳ Connecting to MongoDB...");
     await mongoose.connect(MONGO_URI, {
       serverSelectionTimeoutMS: 10000,
     });
-    console.log("✓ Connected to MongoDB successfully.");
+    console.log("✓ MongoDB Connected Successfully.");
 
-    // 2. Wipe existing Worker testing records
-    console.log("🧹 Wiping existing Worker collection records...");
-    const deleteResult = await Worker.deleteMany({});
-    console.log(`✓ Deleted ${deleteResult.deletedCount} existing worker records.`);
+    // 1. Wipe collections
+    console.log("\n🧹 Wiping Worker collection & demo accounts...");
+    await Worker.deleteMany({});
+    
+    // Clean demo users & worker profiles
+    const demoPhones = [...SIX_DEMO_WORKERS.map((w) => w.phone), DEMO_CUSTOMER.phone];
+    await User.deleteMany({ phone: { $in: demoPhones } });
+    await WorkerProfile.deleteMany({});
 
-    // 3. Hash default presentation password (Demo@123)
-    console.log(`🔐 Hashing default presentation password: "${DEFAULT_PASSWORD_PLAIN}"...`);
-    const saltRounds = 10;
-    const passwordHash = await bcrypt.hash(DEFAULT_PASSWORD_PLAIN, saltRounds);
+    console.log("✓ Cleaned collections: Worker, User (demo), WorkerProfile.");
 
-    // 4. Map workers to Mongoose document payload
-    const workerDocuments = SEED_WORKERS_DATA.map((w) => ({
-      name: w.name,
-      phone: w.phone,
-      trade: w.trade,
-      gender: w.gender,
-      hourlyRate: w.hourlyRate,
-      rating: w.rating,
-      sakhiVerified: w.sakhiVerified,
-      verificationStatus: "verified",
-      verifiedAt: new Date(),
-      faceMatchScore: 98.6,
-      aadhaarNumberMasked: w.aadhaarNumberMasked,
-      aadhaarCardImageUrl: w.aadhaarCardImageUrl,
-      selfieImageUrl: w.selfieImageUrl,
-      locationCoords: {
-        lat: w.lat,
-        lng: w.lng,
-      },
-      extractedOcrData: {
+    // 2. Hash default presentation password: "Demo@123"
+    const salt = await bcrypt.genSalt(10);
+    const passwordHash = await bcrypt.hash(DEMO_PASSWORD_PLAIN, salt);
+    console.log(`✓ Generated bcrypt password hash for '${DEMO_PASSWORD_PLAIN}'`);
+
+    // 3. Create Demo Customer Account
+    const customerUser = await User.create({
+      name: DEMO_CUSTOMER.name,
+      phone: DEMO_CUSTOMER.phone,
+      email: DEMO_CUSTOMER.email,
+      passwordHash: passwordHash,
+      role: "customer",
+      gender: DEMO_CUSTOMER.gender,
+      location: DEMO_CUSTOMER.location,
+      avatar: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='50' fill='%231e293b'/><circle cx='50' cy='38' r='18' fill='%2394a3b8'/><path d='M20 86 c0-18 14-30 30-30 s30 12 30 30 Z' fill='%2394a3b8'/></svg>",
+    });
+    console.log(`\n👤 Created Demo Customer: ${customerUser.name} (${customerUser.phone} / ${DEMO_PASSWORD_PLAIN})`);
+
+    // 4. Insert Exactly 6 Demo Workers
+    console.log("\n👷 Seeding 6 Distinct GigConnect Demo Workers:");
+    console.log("-------------------------------------------------");
+
+    const createdWorkerDocs = [];
+
+    for (const w of SIX_DEMO_WORKERS) {
+      const isVerified = w.status === "verified";
+      const verificationStatus = isVerified ? "verified" : "pending";
+
+      // 4A. Create User Account (for Auth login)
+      const userDoc = await User.create({
         name: w.name,
-        dob: "1990-01-01",
-        address: `${w.area}, Delhi NCR`,
-      },
-      adminNotes: "Pre-verified demonstration account with full Cooperative Federation credentials.",
-    }));
-
-    // 5. Insert the 5 verified workers using insertMany
-    console.log("📥 Inserting 5 verified demo workers into MongoDB Worker collection...");
-    const insertedWorkers = await Worker.insertMany(workerDocuments);
-
-    // 6. Synchronize User & WorkerProfile credentials for password login capability
-    for (const w of SEED_WORKERS_DATA) {
-      const email = `${w.name.toLowerCase().replace(/\s+/g, "")}@gigconnect.in`;
-
-      // Upsert User with passwordHash so login works during live presentations
-      let user = await User.findOne({
-        $or: [{ phone: w.phone }, { email }],
+        phone: w.phone,
+        email: w.email,
+        passwordHash: passwordHash,
+        role: "worker",
+        gender: w.gender,
+        location: {
+          lat: w.locationCoords[1],
+          lng: w.locationCoords[0],
+          area: w.area,
+        },
       });
 
-      if (!user) {
-        user = await User.create({
+      // 4B. Create Worker Compliance & Legal Schema Document
+      const workerDoc = await Worker.create({
+        name: w.name,
+        phone: w.phone,
+        aadhaarNumberMasked: MOCK_GOVT_ID,
+        aadhaarCardImageUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
+        selfieImageUrl: "",
+        faceMatchScore: isVerified ? 98 : 45,
+        gender: w.gender,
+        trade: w.trade,
+        hourlyRate: w.hourlyRate,
+        rating: w.rating,
+        sakhiVerified: w.sakhiVerified,
+        locationCoords: {
+          lat: w.locationCoords[1],
+          lng: w.locationCoords[0],
+        },
+        verificationStatus: verificationStatus,
+        verifiedAt: isVerified ? new Date() : undefined,
+        extractedOcrData: {
           name: w.name,
-          phone: w.phone,
-          email,
-          passwordHash,
-          role: "worker",
-          gender: w.gender,
-          avatar: w.selfieImageUrl,
-          location: { lat: w.lat, lng: w.lng, area: w.area },
-        });
-      } else {
-        user.name = w.name;
-        user.phone = w.phone;
-        user.email = email;
-        user.passwordHash = passwordHash;
-        user.role = "worker";
-        user.gender = w.gender;
-        user.avatar = w.selfieImageUrl;
-        user.location = { lat: w.lat, lng: w.lng, area: w.area };
-        await user.save();
-      }
+          dob: "01/01/1990",
+          address: w.area,
+        },
+        socialSecurity: {
+          hasLifeInsurance: isVerified,
+          providerName: "PMJJBY / GigConnect Cooperative Fund",
+          policyNumber: isVerified ? `POL-COOP-${Math.floor(100000 + Math.random() * 900000)}` : "",
+          enrolledViaCooperative: isVerified,
+        },
+        legalConsent: {
+          termsAccepted: true,
+          privacyAccepted: true,
+          consentTimestamp: new Date(),
+          dpdpCompliant: true,
+        },
+      });
 
-      // Upsert GeoJSON WorkerProfile for distance and location clustering
-      let profile = await WorkerProfile.findOne({ userId: user._id });
-      if (!profile) {
-        await WorkerProfile.create({
-          userId: user._id,
-          skills: [w.trade],
-          certifications: ["UIDAI e-KYC Verified", "Co-op Federation Guild #204"],
-          photoUrl: w.selfieImageUrl,
-          verificationStatus: "verified",
-          availability: true,
-          ratingAvg: w.rating,
-          jobsCompleted: Math.floor(Math.random() * 120) + 40,
-          location: {
-            type: "Point",
-            coordinates: [w.lng, w.lat],
-          },
-        });
-      } else {
-        profile.skills = [w.trade];
-        profile.ratingAvg = w.rating;
-        profile.verificationStatus = "verified";
-        profile.location = {
+      // 4C. Create WorkerProfile Document (for geo queries & discovery)
+      await WorkerProfile.create({
+        userId: userDoc._id,
+        skills: w.skills,
+        verificationStatus: isVerified ? "verified" : "pending",
+        sakhiVerified: w.sakhiVerified,
+        isSakhiVerified: w.sakhiVerified,
+        availability: true,
+        ratingAvg: w.rating,
+        ratingCount: isVerified ? 48 : 0,
+        jobsCompleted: isVerified ? 124 : 0,
+        location: {
           type: "Point",
-          coordinates: [w.lng, w.lat],
-        };
-        await profile.save();
-      }
+          coordinates: w.locationCoords, // [lng, lat]
+        },
+        socialSecurity: {
+          hasLifeInsurance: isVerified,
+          providerName: "PMJJBY / GigConnect Cooperative Fund",
+          policyNumber: isVerified ? `POL-COOP-${Math.floor(100000 + Math.random() * 900000)}` : "",
+          enrolledViaCooperative: isVerified,
+        },
+        legalConsent: {
+          termsAccepted: true,
+          privacyAccepted: true,
+          consentTimestamp: new Date(),
+          dpdpCompliant: true,
+        },
+      });
+
+      createdWorkerDocs.push({
+        name: w.name,
+        trade: w.trade,
+        rate: `₹${w.hourlyRate}/hr`,
+        sakhi: w.sakhiVerified ? "♀ Sakhi Verified" : "Standard",
+        status: w.status.toUpperCase(),
+        location: `[${w.locationCoords[0]}, ${w.locationCoords[1]}]`,
+        phone: w.phone,
+        password: DEMO_PASSWORD_PLAIN,
+      });
     }
 
-    console.log("=================================================");
-    console.log(`✅ Successfully seeded ${insertedWorkers.length} verified demo workers!`);
-    console.log("-------------------------------------------------");
-    insertedWorkers.forEach((w, idx) => {
-      console.log(
-        `${idx + 1}. ${w.name.padEnd(16)} | Phone: ${w.phone} | Trade: ${w.trade.padEnd(18)} | Rate: ₹${w.hourlyRate}/hr | Sakhi: ${w.sakhiVerified ? "♀ YES" : "NO"} | Status: ${w.verificationStatus}`
-      );
-    });
-    console.log("-------------------------------------------------");
-    console.log(`🔑 Login Password for all 5 accounts: "${DEFAULT_PASSWORD_PLAIN}"`);
-    console.log("=================================================");
+    console.table(createdWorkerDocs);
 
-    await mongoose.disconnect();
-    console.log("✓ Disconnected from MongoDB. Clean slate ready for demo.");
-    process.exit(0);
+    console.log("=================================================");
+    console.log("🎉 SUCCESS: All 6 Demo Workers & 1 Customer Seeded!");
+    console.log(`🔑 Login Password for ALL accounts: '${DEMO_PASSWORD_PLAIN}'`);
+    console.log("=================================================");
   } catch (error) {
-    console.error("❌ [Seed Error]:", error);
-    try {
-      await mongoose.disconnect();
-    } catch (e) {}
+    console.error("❌ Seed Script Error:", error);
     process.exit(1);
+  } finally {
+    await mongoose.disconnect();
+    console.log("🔌 Disconnected from MongoDB.");
+    process.exit(0);
   }
 }
 
-seedWorkers();
+seedDatabase();

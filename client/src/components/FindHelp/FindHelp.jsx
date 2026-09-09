@@ -5,6 +5,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { getWorkers } from "../../api";
 import VoiceAssistant from "../VoiceAssistant/VoiceAssistant";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function FindHelp({ onNavigate }) {
   const { t } = useTranslation();
@@ -91,7 +92,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 250,
       sakhiVerified: false,
       area: "Connaught Place & Central Delhi",
-      image: "/illustrations/electrician.jpg",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w2",
@@ -109,7 +110,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 400,
       sakhiVerified: true,
       area: "South Delhi & Noida Sector 62",
-      image: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w3",
@@ -127,7 +128,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 350,
       sakhiVerified: false,
       area: "Gurugram Cyber City & DLF Phase 2",
-      image: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w4",
@@ -145,7 +146,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 300,
       sakhiVerified: true,
       area: "Rohini & North Delhi",
-      image: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w5",
@@ -163,7 +164,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 200,
       sakhiVerified: false,
       area: "Noida Sector 18 & Indirapuram",
-      image: "/illustrations/plumber.jpg",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w6",
@@ -181,7 +182,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 200,
       sakhiVerified: true,
       area: "Dwarka & West Delhi",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w7",
@@ -199,7 +200,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 350,
       sakhiVerified: true,
       area: "Vasant Kunj & South Delhi",
-      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_FEMALE_AVATAR,
     },
     {
       id: "w8",
@@ -217,7 +218,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 300,
       sakhiVerified: false,
       area: "Laxmi Nagar & East Delhi",
-      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w9",
@@ -235,7 +236,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 350,
       sakhiVerified: false,
       area: "Gurugram & Delhi NCR",
-      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
     {
       id: "w10",
@@ -253,7 +254,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: 250,
       sakhiVerified: false,
       area: "Greater Kailash & Chanakyapuri",
-      image: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=250&auto=format&fit=crop&q=80",
+      image: DEFAULT_MALE_AVATAR,
     },
   ];
 
@@ -339,7 +340,7 @@ export default function FindHelp({ onNavigate }) {
               distanceKm: p.distanceKm || 2.5,
               sakhiVerified: Boolean(p.isSakhiVerified || p.sakhiVerified || p.userId?.gender?.toLowerCase() === "female"),
               area: p.userId?.location?.area || "Delhi NCR",
-              image: p.photoUrl || "/illustrations/happy-customer.jpg",
+              image: p.photoUrl || (p.isSakhiVerified || p.sakhiVerified || p.userId?.gender?.toLowerCase() === "female" ? DEFAULT_FEMALE_AVATAR : DEFAULT_MALE_AVATAR),
             };
           });
           setApiWorkers(mapped);

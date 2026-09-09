@@ -4,6 +4,7 @@ import AadhaarModal from "../AadhaarModal/AadhaarModal";
 import LegalModal from "../LegalModal";
 import { registerWorker } from "../../api";
 import { showToast } from "../../toast";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function RegisterWorker({ onNavigate }) {
   const [currentStep, setCurrentStep] = useState(1);
@@ -83,7 +84,7 @@ export default function RegisterWorker({ onNavigate }) {
         location: { area: workerData.territory.split("(")[0].trim() },
         aadhaarMasked: workerData.aadhaarMasked,
         verificationStatus: "pending",
-        photoUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
+        photoUrl: DEFAULT_MALE_AVATAR,
         socialSecurity: {
           hasLifeInsurance: true,
           providerName: insuranceOption === "existing" ? (providerName || "e-Shram Linked Insurance") : "PMJJBY / Cooperative Group Life",

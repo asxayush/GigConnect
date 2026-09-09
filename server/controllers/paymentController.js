@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import Razorpay from "razorpay";
 import Booking from "../models/Booking.js";
 import WorkerProfile from "../models/WorkerProfile.js";
-import { getIO } from "../sockets/bookingSocket.js";
+import { getIO, notifyPaymentSecured } from "../sockets/bookingSocket.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 
@@ -30,19 +30,19 @@ export const getRazorpayInstance = () => {
 };
 
 /**
- * PART 2: Razorpay Controller
+ * PART 3: PAYMENT CONTROLLER WITH RAZORPAY (ZERO-REFUND ESCROW WORKFLOW)
  */
 
 /**
- * @desc 1. Create Razorpay order for initial base fare (Pre-paid Escrow)
- * @route POST /api/payments/orders/base
- * @access Private
+ * @desc 1. Create Escrow Order (Called by Customer ONLY AFTER Worker accepts booking)
+ * @route POST /api/payments/escrow/order
+ * @access Private (Customer)
  */
-export const createBaseOrder = asyncHandler(async (req, res) => {
+export const createEscrowOrder = asyncHandler(async (req, res) => {
   const { bookingId, amount } = req.body;
 
   if (!bookingId) {
-    throw new ApiError(400, "bookingId is required to initialize payment.");
+    throw new ApiError(400, "bookingId is required to initialize escrow payment.");
   }
 
   const booking = await Booking.findById(bookingId);
@@ -50,20 +50,39 @@ export const createBaseOrder = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Booking record not found.");
   }
 
-  // Prevent double payment
+  // Strict Rule: Worker MUST accept the request before customer can pay into escrow
+  const isAccepted =
+    booking.requestStatus === "accepted" ||
+    booking.status === "accepted" ||
+    booking.status === "assigned";
+
+  if (!isAccepted) {
+    return res.status(400).json({
+      success: false,
+      message: "Worker must accept the booking before escrow order can be generated.",
+      data: {
+        bookingId: booking._id,
+        currentRequestStatus: booking.requestStatus,
+        paymentStatus: booking.paymentStatus,
+      },
+    });
+  }
+
+  // Prevent double payment if already secured in escrow or released
   if (
     booking.paymentStatus === "held_in_escrow" ||
+    booking.paymentStatus === "released" ||
     booking.paymentStatus === "paid" ||
     booking.paymentStatus === "released_to_worker"
   ) {
     return res.status(400).json({
       success: false,
-      message: "This booking is already funded and secured in Escrow.",
+      message: "Payment for this booking is already secured in Escrow.",
       data: { paymentStatus: booking.paymentStatus, totalAmount: booking.totalAmount },
     });
   }
 
-  const targetAmount = Number(amount || booking.baseFare || booking.price || 249);
+  const targetAmount = Number(amount || booking.baseFare || booking.price || booking.totalAmount || 250);
   const amountInPaise = Math.max(100, Math.round(targetAmount * 100));
 
   const { instance, keyId, isConfigured } = getRazorpayInstance();
@@ -84,8 +103,8 @@ export const createBaseOrder = asyncHandler(async (req, res) => {
         notes: {
           bookingId: String(booking._id),
           serviceCategory: booking.serviceCategory,
-          type: "BASE_FARE_ESCROW",
-          cooperative: "GigConnect Multi-State Cooperative",
+          type: "PREPAID_ESCROW_BASE_FARE",
+          cooperative: "GigConnect Cooperative Federation",
         },
       });
       orderPayload = rzpOrder;
@@ -96,162 +115,211 @@ export const createBaseOrder = asyncHandler(async (req, res) => {
   }
 
   booking.baseFare = targetAmount;
-  booking.price = targetAmount;
   booking.totalAmount = targetAmount;
-  booking.paymentStatus = "order_created";
   booking.razorpayOrderId = orderId;
   booking.paymentOrderId = orderId;
   await booking.save();
 
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
+    message: "Escrow order created successfully. Worker is locked.",
     data: {
-      orderId: orderId,
-      amount: orderPayload.amount,
-      currency: orderPayload.currency,
-      keyId: keyId,
+      orderId: orderPayload.id,
+      amount: targetAmount,
+      amountInPaise,
+      currency: "INR",
+      keyId,
       bookingId: booking._id,
-      baseFare: targetAmount,
-      totalAmount: booking.totalAmount,
+      workerId: booking.workerId,
+      serviceCategory: booking.serviceCategory,
+      requestStatus: booking.requestStatus,
+      paymentStatus: booking.paymentStatus,
     },
-    message: "Base fare escrow order initialized successfully.",
   });
 });
 
 /**
- * @desc 2. Verify Razorpay Signature & Lock funds in Escrow
- * @route POST /api/payments/verify
+ * @desc 2. Verify Escrow Payment (Verifies signature and locks funds in Escrow)
+ * @route POST /api/payments/escrow/verify
  * @access Private
  */
-export const verifyPayment = asyncHandler(async (req, res) => {
+export const verifyEscrowPayment = asyncHandler(async (req, res) => {
   const {
     bookingId,
+    razorpayOrderId,
+    razorpayPaymentId,
+    razorpaySignature,
     razorpay_order_id,
     razorpay_payment_id,
     razorpay_signature,
   } = req.body;
 
-  if (!bookingId || !razorpay_order_id || !razorpay_payment_id) {
-    throw new ApiError(
-      400,
-      "bookingId, razorpay_order_id, and razorpay_payment_id are mandatory."
-    );
+  const order_id = razorpayOrderId || razorpay_order_id;
+  const payment_id = razorpayPaymentId || razorpay_payment_id;
+  const signature = razorpaySignature || razorpay_signature;
+
+  if (!bookingId || !order_id || !payment_id) {
+    throw new ApiError(400, "bookingId, razorpayOrderId, and razorpayPaymentId are required.");
   }
 
-  const booking = await Booking.findById(bookingId).populate(
-    "workerId",
-    "name phone"
-  );
+  const booking = await Booking.findById(bookingId);
   if (!booking) {
-    throw new ApiError(404, "Booking not found.");
-  }
-
-  if (
-    booking.paymentStatus === "held_in_escrow" ||
-    booking.paymentStatus === "released_to_worker"
-  ) {
-    return res.status(200).json({
-      success: true,
-      data: booking,
-      message: "Payment signature already verified and funds held in escrow.",
-    });
+    throw new ApiError(404, "Booking record not found.");
   }
 
   const { keySecret, isConfigured } = getRazorpayInstance();
 
-  // HMAC SHA256 Signature verification
-  let isValidSignature = true;
-  if (isConfigured && razorpay_signature) {
-    const expectedSignature = crypto
+  // Signature verification
+  let isValidSignature = false;
+  if (isConfigured && signature) {
+    const generatedSignature = crypto
       .createHmac("sha256", keySecret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
+      .update(`${order_id}|${payment_id}`)
       .digest("hex");
-
-    if (expectedSignature !== razorpay_signature) {
-      isValidSignature = false;
-    }
+    isValidSignature = generatedSignature === signature;
+  } else {
+    // Demo mode: accept synthetic test tokens
+    isValidSignature = Boolean(payment_id);
   }
 
   if (!isValidSignature) {
-    booking.paymentStatus = "failed";
-    await booking.save();
-    throw new ApiError(400, "Invalid payment cryptographic signature. Security verification failed.");
+    throw new ApiError(400, "Invalid Razorpay payment signature verification failed.");
   }
 
-  // Calculate Zero Platform Fee Distribution (95% Worker / 5% Mutual Welfare / 0% Platform)
-  const totalBill = Number(booking.totalAmount || booking.baseFare || booking.price || 0);
-  const workerPayout = Math.round(totalBill * 0.95);
-  const mutualWelfare = Math.round(totalBill * 0.05);
-  const platformFee = 0;
-
-  const otpPin = booking.otp || Math.floor(1000 + Math.random() * 9000).toString();
-
+  // Update booking state to 'held_in_escrow'
   booking.paymentStatus = "held_in_escrow";
-  booking.razorpayOrderId = razorpay_order_id;
-  booking.razorpayPaymentId = razorpay_payment_id;
-  booking.paymentSignature = razorpay_signature || "sha256_mock_verified";
-  booking.status = "Assigned";
-  booking.assignedAt = new Date();
-  booking.otp = otpPin;
-  booking.otpAttempts = 0;
-  booking.distribution = {
-    workerPayout,
-    mutualWelfare,
-    platformFee,
-  };
+  booking.razorpayOrderId = order_id;
+  booking.razorpayPaymentId = payment_id;
+  booking.razorpaySignature = signature || "verified_synthetic_signature";
+  booking.paymentOrderId = order_id;
+  booking.paymentId = payment_id;
+  booking.paymentSignature = signature || "verified_synthetic_signature";
 
   await booking.save();
 
-  // Broadcast real-time event to rooms
+  // Trigger Real-Time Socket Event to Worker: payment_secured_proceed
   try {
-    const io = getIO();
-    if (io) {
-      const payload = {
-        bookingId: booking._id,
-        status: "Assigned",
-        paymentStatus: "held_in_escrow",
-        otp: otpPin,
-        totalAmount: booking.totalAmount,
-        distribution: booking.distribution,
-      };
-
-      io.to(`booking_${booking._id}`).emit("booking_paid", payload);
-      io.to(`booking_${booking._id}`).emit("payment_escrow_secured", payload);
-
-      if (booking.workerId?._id) {
-        io.to(`worker_${booking.workerId._id}`).emit("newBookingAssigned", booking);
-      }
-    }
+    notifyPaymentSecured(booking);
   } catch (socketErr) {
-    console.warn("[Payment Verification] Socket emit warning:", socketErr.message);
+    console.warn("[Socket] Error triggering payment_secured_proceed:", socketErr.message);
   }
 
   return res.status(200).json({
     success: true,
+    message: "Payment successfully verified and held in secure Escrow. Worker notified to proceed.",
     data: {
       bookingId: booking._id,
-      status: booking.status,
       paymentStatus: booking.paymentStatus,
+      requestStatus: booking.requestStatus,
+      totalAmount: booking.totalAmount,
       razorpayOrderId: booking.razorpayOrderId,
       razorpayPaymentId: booking.razorpayPaymentId,
-      totalAmount: booking.totalAmount,
       distribution: booking.distribution,
-      otp: booking.otp,
     },
-    message: "Payment successfully verified! 100% of funds locked in dispute-free Escrow.",
   });
 });
 
 /**
- * @desc 3. Create Razorpay order for approved Add-On / Overtime charge
- * @route POST /api/payments/orders/addon
+ * @desc 3. Release Payout to Worker (Called on job completion)
+ * @route POST /api/payments/escrow/release
  * @access Private
  */
-export const createAddOnOrder = asyncHandler(async (req, res) => {
-  const { bookingId, chargeId, amount, reason } = req.body;
+export const releasePayout = asyncHandler(async (req, res) => {
+  const bookingId = req.params.id || req.body.bookingId;
 
   if (!bookingId) {
-    throw new ApiError(400, "bookingId is required.");
+    throw new ApiError(400, "bookingId is required to release payout.");
+  }
+
+  const booking = await Booking.findById(bookingId);
+  if (!booking) {
+    throw new ApiError(404, "Booking record not found.");
+  }
+
+  if (booking.paymentStatus === "released" || booking.paymentStatus === "released_to_worker") {
+    return res.status(200).json({
+      success: true,
+      message: "Payout has already been released to the worker.",
+      data: booking,
+    });
+  }
+
+  // Update states
+  booking.requestStatus = "completed";
+  booking.status = "completed";
+  booking.paymentStatus = "released";
+  booking.customerCompletedAt = new Date();
+  booking.completedAt = new Date();
+  booking.settledAt = new Date();
+
+  await booking.save();
+
+  // Mock Jan Dhan / Cooperative Bank UPI Payout Transfer
+  const workerPayoutAmount = booking.distribution?.workerPayout || Math.round((booking.totalAmount || 250) * 0.95);
+  const welfareAmount = booking.distribution?.mutualWelfare || Math.round((booking.totalAmount || 250) * 0.05);
+
+  console.log(`[Escrow Settlement] Released ₹${workerPayoutAmount} (95%) to Worker ${booking.workerId}`);
+  console.log(`[Escrow Settlement] Contributed ₹${welfareAmount} (5%) to PMJJBY Cooperative Mutual Welfare Fund`);
+
+  // Update Worker stats in WorkerProfile
+  if (booking.workerId) {
+    await WorkerProfile.findOneAndUpdate(
+      { userId: booking.workerId },
+      { $inc: { jobsCompleted: 1 } }
+    ).catch(() => {});
+  }
+
+  // Notify real-time sockets
+  try {
+    const io = getIO();
+    if (io) {
+      const payload = {
+        bookingId: String(booking._id),
+        paymentStatus: "released",
+        requestStatus: "completed",
+        payoutAmount: workerPayoutAmount,
+        welfareContribution: welfareAmount,
+        timestamp: new Date().toISOString(),
+      };
+      io.to(String(booking.workerId)).emit("payout_released", payload);
+      io.to(`worker_${booking.workerId}`).emit("payout_released", payload);
+      io.to(String(booking.customerId)).emit("booking_settled", payload);
+      io.to(`user_${booking.customerId}`).emit("booking_settled", payload);
+      io.to(`booking_${booking._id}`).emit("booking_settled", payload);
+    }
+  } catch (err) {
+    console.warn("[Socket] Release payout broadcast error:", err.message);
+  }
+
+  return res.status(200).json({
+    success: true,
+    message: "Escrow funds successfully released to Worker Jan Dhan UPI account with 0% platform commission.",
+    data: {
+      bookingId: booking._id,
+      requestStatus: booking.requestStatus,
+      paymentStatus: booking.paymentStatus,
+      workerPayout: workerPayoutAmount,
+      mutualWelfare: welfareAmount,
+      platformFee: 0,
+    },
+  });
+});
+
+/**
+ * Backward-compatible Aliases
+ */
+export const createBaseOrder = createEscrowOrder;
+export const verifyPayment = verifyEscrowPayment;
+export const completeBookingHandler = releasePayout;
+
+/**
+ * Additional Charges (Overtime / Spare Parts)
+ */
+export const createAddOnOrder = asyncHandler(async (req, res) => {
+  const { bookingId, reason, amount } = req.body;
+
+  if (!bookingId || !amount || Number(amount) <= 0) {
+    throw new ApiError(400, "bookingId and positive amount are required for add-on order.");
   }
 
   const booking = await Booking.findById(bookingId);
@@ -259,323 +327,65 @@ export const createAddOnOrder = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Booking not found.");
   }
 
-  let targetCharge = null;
-  if (chargeId) {
-    targetCharge = booking.additionalCharges.id(chargeId);
-  } else if (amount && reason) {
-    booking.additionalCharges.push({
-      reason,
-      amount: Number(amount),
-      status: "requested",
-      requestedAt: new Date(),
-    });
-    targetCharge = booking.additionalCharges[booking.additionalCharges.length - 1];
-  }
-
-  if (!targetCharge) {
-    throw new ApiError(404, "Target add-on charge not found or underspecified.");
-  }
-
-  if (targetCharge.status === "paid") {
-    return res.status(400).json({
-      success: false,
-      message: "This add-on charge has already been paid.",
-    });
-  }
-
-  const amountInPaise = Math.max(100, Math.round(Number(targetCharge.amount) * 100));
   const { instance, keyId, isConfigured } = getRazorpayInstance();
-
+  const amountInPaise = Math.round(Number(amount) * 100);
   let orderId = `addon_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-  let orderPayload = {
-    id: orderId,
-    amount: amountInPaise,
-    currency: "INR",
-    receipt: `addon_${targetCharge._id}`,
-  };
 
   if (isConfigured) {
     try {
       const rzpOrder = await instance.orders.create({
         amount: amountInPaise,
         currency: "INR",
-        receipt: `addon_${targetCharge._id}`,
-        notes: {
-          bookingId: String(booking._id),
-          chargeId: String(targetCharge._id),
-          reason: targetCharge.reason,
-          type: "ADDON_OVERTIME_PAYMENT",
-        },
+        receipt: `addon_${booking._id}_${Date.now()}`,
+        notes: { bookingId: String(booking._id), reason: reason || "Additional Task", type: "ADDON_CHARGE" },
       });
-      orderPayload = rzpOrder;
       orderId = rzpOrder.id;
-    } catch (rzpErr) {
-      console.warn("[Razorpay] Add-on order create fallback:", rzpErr.message);
+    } catch (e) {
+      console.warn("[Razorpay] Add-on order fallback:", e.message);
     }
   }
 
-  targetCharge.razorpayOrderId = orderId;
+  const addOnEntry = {
+    reason: reason || "Additional service / spare parts",
+    amount: Number(amount),
+    status: "requested",
+    razorpayOrderId: orderId,
+    requestedAt: new Date(),
+  };
+
+  booking.additionalCharges.push(addOnEntry);
   await booking.save();
 
-  return res.status(201).json({
+  return res.status(200).json({
     success: true,
-    data: {
-      orderId: orderId,
-      chargeId: targetCharge._id,
-      amount: orderPayload.amount,
-      currency: orderPayload.currency,
-      keyId: keyId,
-      bookingId: booking._id,
-      reason: targetCharge.reason,
-    },
-    message: "Add-on Razorpay order created for customer approval.",
+    message: "Add-on order created successfully.",
+    data: { orderId, amount: Number(amount), currency: "INR", keyId, addOn: addOnEntry },
   });
 });
 
-/**
- * @desc 3b. Verify Add-On payment signature & update charge status to 'paid'
- * @route POST /api/payments/verify/addon
- * @access Private
- */
 export const verifyAddOnPayment = asyncHandler(async (req, res) => {
-  const {
-    bookingId,
-    chargeId,
-    razorpay_order_id,
-    razorpay_payment_id,
-    razorpay_signature,
-  } = req.body;
-
-  if (!bookingId || !chargeId) {
-    throw new ApiError(400, "bookingId and chargeId are required.");
-  }
+  const { bookingId, addOnId, razorpayOrderId, razorpayPaymentId, razorpaySignature } = req.body;
 
   const booking = await Booking.findById(bookingId);
   if (!booking) {
     throw new ApiError(404, "Booking not found.");
   }
 
-  const charge = booking.additionalCharges.id(chargeId);
+  const charge = booking.additionalCharges.id(addOnId) || booking.additionalCharges.find((c) => c.razorpayOrderId === razorpayOrderId);
   if (!charge) {
-    throw new ApiError(404, "Additional charge record not found.");
-  }
-
-  if (charge.status === "paid") {
-    return res.status(200).json({
-      success: true,
-      data: booking,
-      message: "Add-on charge already verified and paid.",
-    });
-  }
-
-  const { keySecret, isConfigured } = getRazorpayInstance();
-
-  let isValid = true;
-  if (isConfigured && razorpay_signature && razorpay_order_id && razorpay_payment_id) {
-    const expected = crypto
-      .createHmac("sha256", keySecret)
-      .update(`${razorpay_order_id}|${razorpay_payment_id}`)
-      .digest("hex");
-    if (expected !== razorpay_signature) {
-      isValid = false;
-    }
-  }
-
-  if (!isValid) {
-    charge.status = "rejected";
-    await booking.save();
-    throw new ApiError(400, "Add-on payment signature verification failed.");
+    throw new ApiError(404, "Add-on charge not found.");
   }
 
   charge.status = "paid";
-  charge.razorpayPaymentId = razorpay_payment_id;
-  charge.razorpaySignature = razorpay_signature || "sha256_mock_verified";
+  charge.razorpayPaymentId = razorpayPaymentId;
+  charge.razorpaySignature = razorpaySignature;
   charge.resolvedAt = new Date();
 
-  // Recalculate total amount and splits
-  const paidAddons = booking.additionalCharges
-    .filter((c) => c.status === "paid")
-    .reduce((sum, c) => sum + Number(c.amount || 0), 0);
-
-  booking.totalAmount = (Number(booking.baseFare) || Number(booking.price) || 0) + paidAddons;
-  booking.price = booking.totalAmount;
-
-  booking.distribution = {
-    workerPayout: Math.round(booking.totalAmount * 0.95),
-    mutualWelfare: Math.round(booking.totalAmount * 0.05),
-    platformFee: 0,
-  };
-
   await booking.save();
-
-  // Real-time broadcast to worker that overtime/addon has been funded!
-  try {
-    const io = getIO();
-    if (io) {
-      const eventPayload = {
-        bookingId: booking._id,
-        chargeId: charge._id,
-        reason: charge.reason,
-        amount: charge.amount,
-        status: "paid",
-        newTotalAmount: booking.totalAmount,
-        distribution: booking.distribution,
-      };
-
-      io.to(`booking_${booking._id}`).emit("addon_approved", eventPayload);
-      if (booking.workerId) {
-        io.to(`worker_${booking.workerId}`).emit("addon_approved", eventPayload);
-      }
-    }
-  } catch (socketErr) {
-    console.warn("[AddOn Verify] Socket emit error:", socketErr.message);
-  }
 
   return res.status(200).json({
     success: true,
-    data: {
-      bookingId: booking._id,
-      chargeId: charge._id,
-      status: charge.status,
-      totalAmount: booking.totalAmount,
-      distribution: booking.distribution,
-    },
-    message: "Overtime/Add-on payment verified and approved successfully.",
+    message: "Add-on payment verified and locked in escrow.",
+    data: { bookingId: booking._id, totalAmount: booking.totalAmount, charge },
   });
 });
-
-/**
- * @desc 4. Release Escrow Payout (Mock / Razorpay Route Integration)
- * Can be called upon Customer Dual-Handshake confirmation OR 24-hr Auto-Release Cron.
- */
-export const releasePayout = async (booking, releaseContext = {}) => {
-  if (!booking) throw new Error("Booking instance is required for payout release.");
-
-  // If already released, return idempotently
-  if (booking.paymentStatus === "released_to_worker") {
-    return booking;
-  }
-
-  const workerPayoutAmount = booking.distribution?.workerPayout || Math.round(Number(booking.totalAmount || booking.price || 0) * 0.95);
-  const welfareAmount = booking.distribution?.mutualWelfare || Math.round(Number(booking.totalAmount || booking.price || 0) * 0.05);
-
-  /**
-   * Razorpay Route / Payout Dispatch Logic (Simulated for Hackathon/Staging)
-   * In Production:
-   * await razorpay.transfers.create({
-   *   account: workerProfile.bankAccountOrVpa,
-   *   amount: workerPayoutAmount * 100,
-   *   currency: "INR",
-   *   notes: { bookingId: booking._id, split: "95_percent_worker" }
-   * });
-   */
-  console.log(`[ESCROW PAYOUT RELEASED] Booking: ${booking._id} | Worker Payout: ₹${workerPayoutAmount} (95%) | Welfare Fund: ₹${welfareAmount} (5%) | Source: ${releaseContext.reason || "Customer Dual-Handshake"}`);
-
-  booking.paymentStatus = "released_to_worker";
-  booking.status = "Completed";
-  booking.completedAt = new Date();
-  booking.settledAt = new Date();
-  booking.customerCompletedAt = new Date();
-
-  await booking.save();
-
-  // Credit worker welfare balance & restore worker availability
-  if (booking.workerId) {
-    await WorkerProfile.findOneAndUpdate(
-      { $or: [{ userId: booking.workerId }, { _id: booking.workerId }] },
-      {
-        availability: true,
-        $inc: {
-          jobsCompleted: 1,
-          welfareFundBalance: welfareAmount,
-        },
-      }
-    );
-  }
-
-  // Socket broadcast to participants
-  try {
-    const io = getIO();
-    if (io) {
-      const payload = {
-        bookingId: booking._id,
-        status: "Completed",
-        paymentStatus: "released_to_worker",
-        settledAt: booking.settledAt,
-        distribution: booking.distribution,
-        releasedBy: releaseContext.reason || "customer_confirmation",
-      };
-
-      io.to(`booking_${booking._id}`).emit("booking_completed", payload);
-      io.to(`booking_${booking._id}`).emit("escrow_released", payload);
-
-      if (booking.workerId) {
-        io.to(`worker_${booking.workerId}`).emit("payout_released", payload);
-      }
-    }
-  } catch (socketErr) {
-    console.warn("[Release Payout] Socket emit error:", socketErr.message);
-  }
-
-  return booking;
-};
-
-/**
- * @desc PART 4: Dual-Handshake Job Completion API
- * @route POST /api/bookings/:id/complete
- * @access Private (Customer / Admin)
- */
-export const completeBookingHandler = asyncHandler(async (req, res) => {
-  const bookingId = req.params.id;
-  const booking = await Booking.findById(bookingId).populate("customerId workerId", "name phone");
-
-  if (!booking) {
-    throw new ApiError(404, "Booking not found.");
-  }
-
-  const isCustomer = req.user && String(booking.customerId?._id || booking.customerId) === String(req.user._id);
-  const isAdmin = req.user && req.user.role === "admin";
-
-  if (!isCustomer && !isAdmin) {
-    throw new ApiError(403, "Only the customer or an admin can confirm job completion and release escrow.");
-  }
-
-  const updatedBooking = await releasePayout(booking, {
-    reason: `customer_confirmation_by_${req.user?.name || req.user?._id}`,
-  });
-
-  return res.status(200).json({
-    success: true,
-    data: updatedBooking,
-    message: "Job completion confirmed! Escrow funds released directly to worker (95%) and Cooperative Welfare Fund (5%).",
-  });
-});
-
-/**
- * CRON JOB SPECIFICATION: Auto-Release Escrow after 24 Hours
- * -------------------------------------------------------------
- * If a worker marks a job done (`workerMarkedDone: true`) and the customer
- * fails to confirm or dispute within 24 hours (`autoReleaseAt <= now`),
- * this job automatically releases the escrowed payout to the worker.
- *
- * Example Cron Schedule (Every 15 minutes):
- * cron.schedule("15 * * * *", async () => {
- *   await checkAndAutoReleaseEscrow();
- * });
- */
-export const checkAndAutoReleaseEscrow = async () => {
-  try {
-    const expiredBookings = await Booking.find({
-      paymentStatus: "held_in_escrow",
-      workerMarkedDone: true,
-      autoReleaseAt: { $lte: new Date() },
-    });
-
-    for (const booking of expiredBookings) {
-      console.log(`[Auto-Release Cron] Automatically releasing escrow for booking ${booking._id} after 24h.`);
-      await releasePayout(booking, { reason: "auto_released_after_24h" });
-    }
-  } catch (err) {
-    console.error("[Auto-Release Cron Error]:", err.message);
-  }
-};

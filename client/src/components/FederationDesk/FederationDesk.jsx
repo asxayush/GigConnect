@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { showToast } from "../../toast";
 import AdminDashboard from "../AdminDashboard/AdminDashboard";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function FederationDesk({ onNavigate }) {
   const [activeTab, setActiveTab] = useState("charter"); // 'charter' | 'operations'
@@ -27,7 +28,7 @@ export default function FederationDesk({ onNavigate }) {
       mandate: "4,200 Votes",
       zone: "Western Zone",
       badge: "Director • Board Member",
-      img: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=600&auto=format&fit=crop&q=80",
+      img: DEFAULT_MALE_AVATAR,
     },
     {
       name: "Kavita S. Murthy",
@@ -37,7 +38,7 @@ export default function FederationDesk({ onNavigate }) {
       mandate: "5,850 Votes",
       zone: "Southern Metro Zone",
       badge: "Vice President • Federation",
-      img: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=600&auto=format&fit=crop&q=80",
+      img: DEFAULT_FEMALE_AVATAR,
     },
     {
       name: "Arun K. Sen",
@@ -47,7 +48,7 @@ export default function FederationDesk({ onNavigate }) {
       mandate: "3,920 Votes",
       zone: "Eastern Zone",
       badge: "Director • Board Member",
-      img: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=600&auto=format&fit=crop&q=80",
+      img: DEFAULT_MALE_AVATAR,
     },
   ];
 

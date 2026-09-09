@@ -1,5 +1,8 @@
 import { Router } from "express";
 import {
+  createEscrowOrder,
+  verifyEscrowPayment,
+  releasePayout,
   createBaseOrder,
   verifyPayment,
   createAddOnOrder,
@@ -9,9 +12,15 @@ import {
 
 const router = Router();
 
-// Base Pre-paid Escrow Order creation
+// PART 3 Escrow Endpoints
+router.post("/escrow/order", createEscrowOrder);
+router.post("/escrow/verify", verifyEscrowPayment);
+router.post("/escrow/release", releasePayout);
+router.post("/escrow/release/:id", releasePayout);
+
+// Base Pre-paid Escrow Order creation (Aliases)
 router.post("/orders/base", createBaseOrder);
-router.post("/orders", createBaseOrder); // Backward-compatible alias
+router.post("/orders", createBaseOrder);
 
 // Base Pre-paid Escrow Payment Verification (Locks in Escrow)
 router.post("/verify", verifyPayment);
@@ -22,7 +31,7 @@ router.post("/orders/addon", createAddOnOrder);
 // Add-On Payment Verification
 router.post("/verify/addon", verifyAddOnPayment);
 
-// Dual-Handshake Escrow Payout Release
+// Dual-Handshake Escrow Payout Release (Aliases)
 router.post("/bookings/:id/complete", completeBookingHandler);
 router.post("/release-payout/:id", completeBookingHandler);
 

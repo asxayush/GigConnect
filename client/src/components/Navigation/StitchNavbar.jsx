@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ProfileDrawer from "../ProfileDrawer";
+import { getAvatar, DEFAULT_MALE_AVATAR } from "../../assets/avatars";
 
 export default function StitchNavbar({
   view,
@@ -14,10 +15,7 @@ export default function StitchNavbar({
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
   // Fallback avatar resolution
-  const profileUrl =
-    user?.avatar ||
-    user?.photoURL ||
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";
+  const profileUrl = getAvatar(user);
 
   return (
     <>
@@ -122,7 +120,7 @@ export default function StitchNavbar({
                     className="w-8 h-8 rounded-lg object-cover ring-1 ring-slate-200"
                     src={profileUrl}
                     onError={(e) => {
-                      e.target.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";
+                      e.target.src = DEFAULT_MALE_AVATAR;
                     }}
                   />
                   <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-1.5 ring-white" />

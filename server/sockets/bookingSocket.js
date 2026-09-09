@@ -1,11 +1,54 @@
 import { Server } from "socket.io";
+import Booking from "../models/Booking.js";
+import User from "../models/User.js";
+import EmergencyAlert from "../models/EmergencyAlert.js";
 import { registerChatHandlers } from "./chatSocket.js";
 import { registerSupportHandlers } from "./supportSocket.js";
 import { registerPaymentHandlers } from "./paymentSocket.js";
-import EmergencyAlert from "../models/EmergencyAlert.js";
 
 let ioInstance = null;
 
+/**
+ * Helper to get active Socket.io instance
+ */
+export const getIO = () => ioInstance;
+
+/**
+ * Socket notification when payment is verified in Escrow (REST -> Worker)
+ */
+export const notifyPaymentSecured = (booking) => {
+  if (!ioInstance || !booking) return;
+
+  const payload = {
+    bookingId: String(booking._id),
+    customerId: String(booking.customerId),
+    workerId: String(booking.workerId),
+    serviceCategory: booking.serviceCategory,
+    paymentStatus: "held_in_escrow",
+    requestStatus: booking.requestStatus || "accepted",
+    totalAmount: booking.totalAmount,
+    message: "Pre-paid Escrow funds secured! Please travel to customer site.",
+    timestamp: new Date().toISOString(),
+  };
+
+  const targetWorker = String(booking.workerId);
+  const targetCustomer = String(booking.customerId);
+
+  // Emit to Worker room (supports raw ID and prefixed ID)
+  ioInstance.to(targetWorker).emit("payment_secured_proceed", payload);
+  ioInstance.to(`worker_${targetWorker}`).emit("payment_secured_proceed", payload);
+
+  // Also broadcast to Customer & Booking room
+  ioInstance.to(targetCustomer).emit("payment_secured_confirmed", payload);
+  ioInstance.to(`user_${targetCustomer}`).emit("payment_secured_confirmed", payload);
+  ioInstance.to(`booking_${booking._id}`).emit("payment_secured_proceed", payload);
+
+  console.log(`[Socket] Emitted payment_secured_proceed for Booking ${booking._id} to Worker ${targetWorker}`);
+};
+
+/**
+ * Initialize Socket.io server and real-time handshake handlers
+ */
 export const initBookingSocket = (httpServer) => {
   const allowedOrigins = (process.env.CLIENT_URL || "")
     .split(",")
@@ -23,50 +66,267 @@ export const initBookingSocket = (httpServer) => {
   ioInstance.on("connection", (socket) => {
     console.log(`[Socket.io] Client connected: ${socket.id}`);
 
-    // Register Chat Handlers
+    // Register Chat, Support & Overtime Handlers
     registerChatHandlers(ioInstance, socket);
-
-    // Register Support & Escalation Handlers
     registerSupportHandlers(ioInstance, socket);
-
-    // Register Payment & Mutual Consent Overtime Handlers
     registerPaymentHandlers(ioInstance, socket);
 
-    // 1. Worker joins private room
-    socket.on("joinWorker", ({ workerId }) => {
-      if (workerId) {
-        socket.join(`worker_${workerId}`);
-        console.log(`[Socket.io] Worker ${workerId} joined room: worker_${workerId}`);
-      }
-    });
+    // ==========================================
+    // ROOM SUBSCRIPTIONS
+    // ==========================================
 
-    // 2. Customer joins private room
-    socket.on("joinUser", ({ userId }) => {
-      if (userId) {
-        socket.join(`user_${userId}`);
-        console.log(`[Socket.io] User ${userId} joined room: user_${userId}`);
+    // 1. Worker joins personal room
+    const handleJoinWorker = ({ workerId, userId }) => {
+      const id = workerId || userId;
+      if (id) {
+        socket.join(String(id));
+        socket.join(`worker_${id}`);
+        console.log(`[Socket.io] Worker joined rooms: '${id}' & 'worker_${id}'`);
       }
-    });
+    };
+    socket.on("joinWorker", handleJoinWorker);
+    socket.on("join_worker", handleJoinWorker);
 
-    // 3. Join specific booking room for real-time tracking & updates
+    // 2. Customer joins personal room
+    const handleJoinUser = ({ userId, customerId }) => {
+      const id = userId || customerId;
+      if (id) {
+        socket.join(String(id));
+        socket.join(`user_${id}`);
+        console.log(`[Socket.io] User joined rooms: '${id}' & 'user_${id}'`);
+      }
+    };
+    socket.on("joinUser", handleJoinUser);
+    socket.on("join_user", handleJoinUser);
+
+    // 3. Join specific booking room
     const handleJoinBooking = ({ bookingId }) => {
       if (bookingId) {
+        socket.join(String(bookingId));
         socket.join(`booking_${bookingId}`);
-        console.log(`[Socket.io] Socket ${socket.id} joined room: booking_${bookingId}`);
+        console.log(`[Socket.io] Joined booking room: 'booking_${bookingId}'`);
       }
     };
     socket.on("joinBooking", handleJoinBooking);
     socket.on("join_booking", handleJoinBooking);
 
-    // 4. Join Federation Admin Room for high-priority dispatch and SOS
-    const handleJoinAdmin = () => {
-      socket.join("admin_room");
-      console.log(`[Socket.io] Admin socket ${socket.id} joined admin_room`);
-    };
-    socket.on("join_admin", handleJoinAdmin);
-    socket.on("join_admin_room", handleJoinAdmin);
+    // 4. Admin room for dispatch & SOS monitoring
+    socket.on("join_admin", () => socket.join("admin_room"));
+    socket.on("join_admin_room", () => socket.join("admin_room"));
 
-    // 5. LIVE TRACKING: Worker broadcasts GPS position to booking room
+    // ==========================================
+    // PART 4: REAL-TIME BOOKING HANDSHAKE
+    // ==========================================
+
+    /**
+     * Event: request_booking
+     * Customer initiates booking. DB creates record (pending, unpaid).
+     * Backend emits new_booking_request to the assigned/target Worker.
+     */
+    socket.on("request_booking", async (payload, callback) => {
+      try {
+        const {
+          customerId,
+          workerId,
+          serviceCategory,
+          bookingType = "immediate",
+          scheduledDate,
+          scheduledAt,
+          baseFare = 250,
+          price = 250,
+          address = "Customer Location",
+          location,
+          isEmergency = false,
+          specialRequest = "",
+        } = payload || {};
+
+        if (!customerId || !serviceCategory) {
+          if (typeof callback === "function") {
+            return callback({ success: false, error: "customerId and serviceCategory are required." });
+          }
+          return socket.emit("error", { message: "customerId and serviceCategory are required." });
+        }
+
+        const effectiveSchedule = scheduledDate || scheduledAt || (bookingType === "scheduled" ? new Date(Date.now() + 86400000) : new Date());
+
+        const newBooking = await Booking.create({
+          customerId,
+          workerId: workerId || undefined,
+          serviceCategory,
+          bookingType,
+          scheduledDate: effectiveSchedule,
+          scheduledAt: effectiveSchedule,
+          requestStatus: "pending",
+          status: "pending",
+          paymentStatus: "unpaid",
+          baseFare: Number(baseFare || price || 250),
+          price: Number(baseFare || price || 250),
+          totalAmount: Number(baseFare || price || 250),
+          address,
+          location: location || { type: "Point", coordinates: [77.2090, 28.6139] },
+          isEmergency: Boolean(isEmergency),
+          specialRequest,
+        });
+
+        const bookingData = await Booking.findById(newBooking._id)
+          .populate("customerId", "name phone avatar gender")
+          .populate("workerId", "name phone avatar trade");
+
+        const broadcastPayload = {
+          bookingId: String(newBooking._id),
+          booking: bookingData || newBooking,
+          customerId: String(customerId),
+          workerId: workerId ? String(workerId) : null,
+          serviceCategory,
+          bookingType,
+          scheduledDate: effectiveSchedule,
+          baseFare: newBooking.baseFare,
+          totalAmount: newBooking.totalAmount,
+          requestStatus: "pending",
+          paymentStatus: "unpaid",
+          address,
+          timestamp: new Date().toISOString(),
+        };
+
+        // Notify specific worker room
+        if (workerId) {
+          ioInstance.to(String(workerId)).emit("new_booking_request", broadcastPayload);
+          ioInstance.to(`worker_${workerId}`).emit("new_booking_request", broadcastPayload);
+        }
+
+        // Notify customer that booking is created and pending worker acceptance
+        socket.emit("booking_created", {
+          success: true,
+          message: "Booking request placed. Waiting for worker acceptance.",
+          data: broadcastPayload,
+        });
+
+        if (typeof callback === "function") {
+          callback({ success: true, data: broadcastPayload });
+        }
+
+        console.log(`[Handshake] New booking requested: ${newBooking._id} -> Worker ${workerId}`);
+      } catch (err) {
+        console.error("[Handshake] Error in request_booking:", err);
+        if (typeof callback === "function") callback({ success: false, error: err.message });
+        socket.emit("booking_error", { message: err.message });
+      }
+    });
+
+    /**
+     * Event: accept_booking
+     * Worker accepts the pending request.
+     * Backend updates DB (requestStatus: 'accepted') and emits booking_accepted_pay_now to Customer.
+     */
+    socket.on("accept_booking", async (payload, callback) => {
+      try {
+        const { bookingId, workerId } = payload || {};
+
+        if (!bookingId) {
+          if (typeof callback === "function") return callback({ success: false, error: "bookingId is required." });
+          return socket.emit("error", { message: "bookingId is required." });
+        }
+
+        const booking = await Booking.findById(bookingId);
+        if (!booking) {
+          if (typeof callback === "function") return callback({ success: false, error: "Booking not found." });
+          return socket.emit("error", { message: "Booking not found." });
+        }
+
+        booking.requestStatus = "accepted";
+        booking.status = "accepted";
+        if (workerId && !booking.workerId) {
+          booking.workerId = workerId;
+        }
+        booking.assignedAt = new Date();
+        await booking.save();
+
+        const populatedBooking = await Booking.findById(booking._id)
+          .populate("customerId", "name phone avatar")
+          .populate("workerId", "name phone avatar trade");
+
+        const responsePayload = {
+          bookingId: String(booking._id),
+          booking: populatedBooking || booking,
+          customerId: String(booking.customerId),
+          workerId: String(booking.workerId),
+          requestStatus: "accepted",
+          paymentStatus: booking.paymentStatus, // 'unpaid'
+          baseFare: booking.baseFare,
+          totalAmount: booking.totalAmount,
+          message: "Worker accepted! Please complete pre-paid escrow payment to lock booking.",
+          timestamp: new Date().toISOString(),
+        };
+
+        const targetCust = String(booking.customerId);
+
+        // Emit booking_accepted_pay_now to Customer room
+        ioInstance.to(targetCust).emit("booking_accepted_pay_now", responsePayload);
+        ioInstance.to(`user_${targetCust}`).emit("booking_accepted_pay_now", responsePayload);
+        ioInstance.to(`booking_${booking._id}`).emit("booking_accepted_pay_now", responsePayload);
+
+        // Acknowledge worker
+        socket.emit("booking_accepted_confirmed", {
+          success: true,
+          message: "You have accepted the booking. Customer has been asked to fund escrow.",
+          data: responsePayload,
+        });
+
+        if (typeof callback === "function") {
+          callback({ success: true, data: responsePayload });
+        }
+
+        console.log(`[Handshake] Worker ${booking.workerId} accepted Booking ${booking._id}`);
+      } catch (err) {
+        console.error("[Handshake] Error in accept_booking:", err);
+        if (typeof callback === "function") callback({ success: false, error: err.message });
+      }
+    });
+
+    /**
+     * Event: reject_booking
+     */
+    socket.on("reject_booking", async (payload, callback) => {
+      try {
+        const { bookingId, reason } = payload || {};
+        const booking = await Booking.findById(bookingId);
+        if (booking) {
+          booking.requestStatus = "rejected";
+          booking.status = "rejected";
+          await booking.save();
+
+          const rejectPayload = {
+            bookingId: String(booking._id),
+            requestStatus: "rejected",
+            reason: reason || "Worker is currently unavailable.",
+          };
+
+          const targetCust = String(booking.customerId);
+          ioInstance.to(targetCust).emit("booking_rejected", rejectPayload);
+          ioInstance.to(`user_${targetCust}`).emit("booking_rejected", rejectPayload);
+        }
+
+        if (typeof callback === "function") callback({ success: true });
+      } catch (err) {
+        if (typeof callback === "function") callback({ success: false, error: err.message });
+      }
+    });
+
+    /**
+     * Event: payment_verified_trigger (Internal / client socket fallback trigger)
+     */
+    socket.on("payment_verified_trigger", async (payload) => {
+      const { bookingId } = payload || {};
+      if (bookingId) {
+        const booking = await Booking.findById(bookingId);
+        if (booking) notifyPaymentSecured(booking);
+      }
+    });
+
+    // ==========================================
+    // GPS LOCATION & EMERGENCY SOS HANDLERS
+    // ==========================================
+
     socket.on("update_location", (data) => {
       const { bookingId, workerId, lat, lng, coordinates, heading, speed } = data || {};
       const actualCoords = coordinates || (lat && lng ? [lng, lat] : null);
@@ -83,101 +343,47 @@ export const initBookingSocket = (httpServer) => {
           timestamp: new Date().toISOString(),
         };
 
-        // Broadcast to customer & participants in booking room
+        ioInstance.to(String(bookingId)).emit("location_update", payload);
         ioInstance.to(`booking_${bookingId}`).emit("location_update", payload);
-        // Also broadcast to admin room for monitoring
         ioInstance.to("admin_room").emit("worker_location_update", payload);
       }
     });
 
-    // 6. EMERGENCY SOS: Trigger instant emergency broadcast & persist to DB
     socket.on("trigger_sos", async (data) => {
       try {
         const { bookingId, userId, workerId, location, reason, metadata } = data || {};
-        
         let geoPoint = { type: "Point", coordinates: [77.2090, 28.6139] };
         if (location && Array.isArray(location.coordinates)) {
           geoPoint = { type: "Point", coordinates: location.coordinates };
         } else if (location && location.lat && location.lng) {
-          geoPoint = { type: "Point", coordinates: [Number(location.lng), Number(location.lat)] };
+          geoPoint = { type: "Point", coordinates: [location.lng, location.lat] };
         }
 
-        // Create and persist active EmergencyAlert document in MongoDB
-        let alertDoc = null;
-        try {
-          alertDoc = await EmergencyAlert.create({
-            bookingId: bookingId || undefined,
-            userId: userId || undefined,
-            workerId: workerId || undefined,
-            location: geoPoint,
-            status: "active",
-            reason: reason || "🚨 In-app Emergency SOS Triggered by Customer",
-            notes: metadata ? JSON.stringify(metadata) : "",
-          });
-        } catch (dbErr) {
-          console.warn("[Socket.io] EmergencyAlert DB creation fallback:", dbErr.message);
-        }
+        const alert = await EmergencyAlert.create({
+          bookingId: bookingId || undefined,
+          triggeredBy: userId || workerId,
+          userRole: workerId ? "worker" : "customer",
+          location: geoPoint,
+          reason: reason || "RED ALERT: Emergency SOS Triggered",
+          status: "active",
+          metadata: metadata || {},
+        });
 
         const sosPayload = {
-          alertId: alertDoc?._id || `sos-${Date.now()}`,
+          alertId: alert._id,
           bookingId,
-          userId,
-          workerId,
+          triggeredBy: userId || workerId,
           location: geoPoint,
-          status: "active",
-          reason: reason || "🚨 In-app Emergency SOS Triggered by Customer",
-          triggeredAt: new Date().toISOString(),
-          severity: "critical",
-          socketId: socket.id,
+          reason: alert.reason,
+          timestamp: new Date().toISOString(),
         };
 
-        console.error(`🚨 [CRITICAL SOS] Emergency alert triggered for Booking: ${bookingId}, User: ${userId}`);
-
-        // Broadcast to Federation Admin Desk
-        ioInstance.to("admin_room").emit("sos_alert_admin", sosPayload);
-
-        // Broadcast back to current booking room so UI confirms alert status
+        ioInstance.to("admin_room").emit("emergency_sos_alert", sosPayload);
         if (bookingId) {
-          ioInstance.to(`booking_${bookingId}`).emit("sos_status_update", {
-            ...sosPayload,
-            alertMessage: "Federation Admins have been alerted and are tracking this job.",
-          });
+          ioInstance.to(`booking_${bookingId}`).emit("emergency_sos_alert", sosPayload);
         }
-
-        // Acknowledge back to sender socket
-        socket.emit("sos_acknowledged", {
-          success: true,
-          alertId: sosPayload.alertId,
-          message: "Federation Admins have been alerted and are tracking this job.",
-        });
-      } catch (err) {
-        console.error("[Socket.io] Error in trigger_sos handler:", err.message);
-        socket.emit("sos_error", { success: false, message: err.message });
-      }
-    });
-
-    // 7. Resolve SOS Alert by Admin
-    socket.on("resolve_sos", async ({ alertId, bookingId, notes, resolvedBy }) => {
-      try {
-        if (alertId) {
-          await EmergencyAlert.findByIdAndUpdate(alertId, {
-            status: "resolved",
-            resolvedAt: new Date(),
-            resolvedBy,
-            notes,
-          });
-        }
-
-        ioInstance.to("admin_room").emit("sos_resolved", { alertId, bookingId });
-        if (bookingId) {
-          ioInstance.to(`booking_${bookingId}`).emit("sos_status_update", {
-            bookingId,
-            status: "resolved",
-            resolvedAt: new Date().toISOString(),
-          });
-        }
-      } catch (err) {
-        console.error("[Socket.io] Error resolving SOS:", err.message);
+      } catch (e) {
+        console.error("[Socket] SOS Trigger Error:", e.message);
       }
     });
 
@@ -186,12 +392,5 @@ export const initBookingSocket = (httpServer) => {
     });
   });
 
-  return ioInstance;
-};
-
-export const getIO = () => {
-  if (!ioInstance) {
-    throw new Error("Socket.io has not been initialized. Call initBookingSocket first.");
-  }
   return ioInstance;
 };

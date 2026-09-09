@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { signInWithGoogle, getFirebaseIdToken } from "../../auth.js";
 import { loginWithFirebase, sendPhoneOtp, verifyPhoneOtp } from "../../api.js";
 import { showToast } from "../../toast.js";
+import { DEFAULT_MALE_AVATAR } from "../../assets/avatars.js";
 
 export default function SignUp({ onNavigate, setUser }) {
   // Step 1: Phone Input | Step 2: OTP Verification
@@ -230,7 +231,7 @@ export default function SignUp({ onNavigate, setUser }) {
           _id: "google-demo-patron-101",
           name: "Aayush Sharma (Google Verified)",
           email: "aayush.demo@gmail.com",
-          avatar: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80",
+          avatar: DEFAULT_MALE_AVATAR,
           role: "customer",
           isGoogleAuth: true,
         };

@@ -4,6 +4,7 @@ import "react-datepicker/dist/react-datepicker.css";
 import { useTranslation } from "react-i18next";
 import { createBooking, createPaymentOrder, verifyPayment } from "../../api";
 import { showToast } from "../../toast";
+import { getAvatar } from "../../assets/avatars";
 
 export const SERVICE_CATEGORIES = [
   {
@@ -349,7 +350,7 @@ export default function BookingForm({ worker, prefilledDate, onCreated, onCancel
       {worker && (
         <div className="mx-6 mt-4 p-3.5 bg-gray-50 border border-gray-200 rounded-xl flex items-center gap-3">
           <img
-            src={worker.avatar || worker.image || "/illustrations/plumber.jpg"}
+            src={getAvatar(worker)}
             alt={worker.name}
             className="w-12 h-12 rounded-full object-cover border border-gray-300 shadow-sm flex-shrink-0"
           />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 // Web Audio API beep generator for authentic WhatsApp send & receive sounds
 const playChatSound = (type = "receive") => {
@@ -35,7 +36,7 @@ const INITIAL_THREADS = [
     workerId: "w1",
     name: "Rameshwar Kumar",
     trade: "Senior Co-op Plumber",
-    avatar: "/illustrations/plumber.jpg",
+    avatar: DEFAULT_MALE_AVATAR,
     status: "online",
     verified: true,
     rating: 4.9,
@@ -78,7 +79,7 @@ const INITIAL_THREADS = [
     workerId: "w2",
     name: "Rajesh Verma",
     trade: "Certified Electrician",
-    avatar: "/illustrations/electrician.jpg",
+    avatar: DEFAULT_MALE_AVATAR,
     status: "online",
     verified: true,
     rating: 4.8,
@@ -114,7 +115,7 @@ const INITIAL_THREADS = [
     workerId: "w3",
     name: "Sunita Devi",
     trade: "Home Chef & Meal Prep",
-    avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=250&auto=format&fit=crop&q=80",
+    avatar: DEFAULT_FEMALE_AVATAR,
     status: "last seen today at 9:15 AM",
     verified: true,
     rating: 5.0,
@@ -150,7 +151,7 @@ const INITIAL_THREADS = [
     workerId: "w4",
     name: "Mohammad Irfan",
     trade: "AC & Refrigeration Specialist",
-    avatar: "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=250&auto=format&fit=crop&q=80",
+    avatar: DEFAULT_MALE_AVATAR,
     status: "last seen today at 8:40 AM",
     verified: true,
     rating: 4.9,
@@ -179,7 +180,7 @@ const INITIAL_THREADS = [
     workerId: "w5",
     name: "GigConnect Sahayata Kendra",
     trade: "Official Co-op Helpdesk",
-    avatar: "/illustrations/happy-customer.jpg",
+    avatar: DEFAULT_FEMALE_AVATAR,
     status: "online",
     verified: true,
     rating: 5.0,
@@ -366,7 +367,7 @@ export default function CoopWhatsAppChat({ initialWorker, onNavigate }) {
             <div className="flex items-center gap-3">
               <div className="relative">
                 <img
-                  src="/illustrations/happy-customer.jpg"
+                  src={DEFAULT_MALE_AVATAR}
                   alt="My Profile"
                   className="w-10 h-10 rounded-full object-cover border border-gray-300 shadow-sm"
                 />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import BookingForm from "../BookingTicket/BookingForm";
+import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function MyBookings({ onNavigate, selectedWorker }) {
   const { t } = useTranslation();
@@ -28,8 +29,7 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
         memberId: "Member #2910",
         rating: "4.96",
         jobs: "420 verified jobs",
-        image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuD3Cu21x_foINbb___0CZs4Uz0XOU8pEiCH0n5gZBtPuY1UbTsv-Ncwi3G2_6umXqQ6iRIl9FayYgyV092RxJek2_gB2ujiTNPO8OArodVaP1gEh3ZrLxowFu18y8ghf2MeIZwpRxG1Z4AJFA6exrcxlsFb4z9WYroTXLMDMlm96hMo_rDURoCwmFmdm7DwKm1B6lbWaqQJAofTSY2P_gkwLgUZDF_M5eOyubk3tAbkU1fnkMYMvIQD",
+        image: DEFAULT_FEMALE_AVATAR,
         badges: ["Aadhaar Verified", "ESI Protected"],
       },
       schedule: "Tomorrow, Oct 24",
@@ -74,8 +74,7 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
         memberId: "Member #1408",
         rating: "5.0 by you",
         jobs: "Service concluded on Oct 18, 2024",
-        image:
-          "https://lh3.googleusercontent.com/aida-public/AB6AXuDSdTkJDu1RZtr_jCtXLvZx8nPf88RFyHMunFkAxvddGR-1zTkOCpNFcp0iH9SLxqOighcgEIb44HkV3T22NZZUa5wrxQ7_ENxKn7pbV01plvHB3c6xjnqADDEN_4qsvQqi6FdPvZ-vbhy24xNrxt-OzNDGAMw6Jwq0eSc6DFlSTlp8FyvOpDZQwMFNqYWxg3QgtfMGpmUtveyjMwOvSx5PStAGt0Shg-wOEv5rF1s0N7E9-QJ9lTDw",
+        image: DEFAULT_MALE_AVATAR,
         badges: ["Aadhaar Verified"],
       },
       schedule: "Executed: Oct 18, 2024 • 11:30 AM",
@@ -121,7 +120,7 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
           memberId: selectedWorker?.coopId || "Member #2910",
           rating: selectedWorker?.rating || "4.9",
           jobs: "Verified Co-op Guild Member",
-          image: selectedWorker?.avatar || selectedWorker?.image || "/illustrations/plumber.jpg",
+          image: selectedWorker?.avatar || selectedWorker?.image || DEFAULT_MALE_AVATAR,
           badges: ["Aadhaar Verified", "Co-op Certified"],
         },
         schedule: `Scheduled: ${data.scheduledAt ? new Date(data.scheduledAt).toLocaleDateString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" }) : "Today • Immediate"}`,

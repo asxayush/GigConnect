@@ -39,64 +39,83 @@ const bookingSchema = new mongoose.Schema(
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      required: [true, "customerId is required"],
+      index: true,
     },
     workerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
+      index: true,
     },
     serviceCategory: {
       type: String,
-      required: true,
+      required: [true, "serviceCategory is required"],
       trim: true,
     },
-    address: {
+    bookingType: {
       type: String,
-      required: true,
-      trim: true,
+      enum: ["immediate", "scheduled"],
+      default: "immediate",
+      index: true,
     },
-    location: {
-      type: {
-        type: String,
-        enum: ["Point"],
-        default: "Point",
+    scheduledDate: {
+      type: Date,
+      validate: {
+        validator: function (value) {
+          // If bookingType is scheduled, scheduledDate is required
+          if (this.bookingType === "scheduled" && !value && !this.scheduledAt) {
+            return false;
+          }
+          return true;
+        },
+        message: "scheduledDate is required when bookingType is 'scheduled'",
       },
-      coordinates: {
-        type: [Number], // [lng, lat]
-        default: [77.2090, 28.6139],
-      },
-      address: String,
-      lat: Number,
-      lng: Number,
     },
     scheduledAt: {
       type: Date,
-      required: true,
     },
+    requestStatus: {
+      type: String,
+      enum: ["pending", "accepted", "rejected", "completed"],
+      default: "pending",
+      index: true,
+    },
+    // Backward-compatible status alias
     status: {
       type: String,
       enum: [
-        "requested",
         "pending",
+        "requested",
+        "accepted",
         "assigned",
         "in-progress",
-        "completed",
-        "escrow-settled",
-        "cancelled",
-        "Requested",
-        "Assigned",
         "In Progress",
+        "completed",
         "Completed",
+        "rejected",
+        "cancelled",
         "Cancelled",
+        "escrow-settled",
       ],
-      default: "requested",
+      default: "pending",
+    },
+    paymentStatus: {
+      type: String,
+      enum: [
+        "unpaid",
+        "held_in_escrow",
+        "released",
+        "pending",
+        "paid",
+        "released_to_worker",
+        "refunded",
+        "order_created",
+        "escrow_settled",
+        "failed",
+      ],
+      default: "unpaid",
       index: true,
     },
-    isEmergency: {
-      type: Boolean,
-      default: false,
-    },
-    // Pricing & Escrow Architecture
     baseFare: {
       type: Number,
       min: 0,
@@ -113,6 +132,53 @@ const bookingSchema = new mongoose.Schema(
       min: 0,
       default: 0,
     },
+    razorpayOrderId: {
+      type: String,
+      trim: true,
+    },
+    razorpayPaymentId: {
+      type: String,
+      trim: true,
+    },
+    razorpaySignature: {
+      type: String,
+      trim: true,
+    },
+    paymentOrderId: {
+      type: String,
+      trim: true,
+    },
+    paymentId: {
+      type: String,
+      trim: true,
+    },
+    paymentSignature: {
+      type: String,
+      trim: true,
+    },
+    address: {
+      type: String,
+      default: "Customer Location, Delhi-NCR",
+      trim: true,
+    },
+    location: {
+      type: {
+        type: String,
+        enum: ["Point"],
+        default: "Point",
+      },
+      coordinates: {
+        type: [Number], // [lng, lat]
+        default: [77.2090, 28.6139],
+      },
+      address: String,
+      lat: Number,
+      lng: Number,
+    },
+    isEmergency: {
+      type: Boolean,
+      default: false,
+    },
     otp: {
       type: String,
       default: function () {
@@ -123,56 +189,25 @@ const bookingSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
-    paymentStatus: {
-      type: String,
-      enum: [
-        "pending",
-        "held_in_escrow",
-        "released_to_worker",
-        "refunded",
-        "unpaid",
-        "order_created",
-        "paid",
-        "escrow_settled",
-        "failed",
-      ],
-      default: "pending",
-      index: true,
-    },
-    razorpayOrderId: {
-      type: String,
-    },
-    razorpayPaymentId: {
-      type: String,
-    },
-    paymentOrderId: {
-      type: String,
-    },
-    paymentId: {
-      type: String,
-    },
-    paymentSignature: {
-      type: String,
-    },
-    // Cooperative Zero-Platform-Fee Split (95% Worker, 5% Welfare, 0% Platform)
+    // Cooperative Fair Split (95% Worker, 5% Welfare Fund, 0% Platform Commission)
     distribution: {
       workerPayout: {
         type: Number,
-        default: 0, // 95%
+        default: 0,
       },
       mutualWelfare: {
         type: Number,
-        default: 0, // 5%
+        default: 0,
       },
       platformFee: {
         type: Number,
-        default: 0, // 0%
+        default: 0,
       },
     },
     specialRequest: {
       type: String,
+      default: "",
     },
-    // Dual-Handshake Completion tracking
     workerMarkedDone: {
       type: Boolean,
       default: false,
@@ -194,8 +229,31 @@ const bookingSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// Pre-save hook to ensure baseFare and totalAmount are always synchronized with price
+// Pre-save hook: Sync status aliases, amounts, scheduled dates, and Razorpay aliases
 bookingSchema.pre("save", function (next) {
+  // Sync requestStatus with legacy status
+  if (this.requestStatus && !this.status) {
+    this.status = this.requestStatus;
+  } else if (this.status && !this.requestStatus) {
+    if (this.status === "assigned" || this.status === "in-progress" || this.status === "In Progress") {
+      this.requestStatus = "accepted";
+    } else if (this.status === "completed" || this.status === "Completed") {
+      this.requestStatus = "completed";
+    } else if (this.status === "cancelled" || this.status === "Cancelled") {
+      this.requestStatus = "rejected";
+    } else {
+      this.requestStatus = "pending";
+    }
+  }
+
+  // Sync scheduledDate and scheduledAt
+  if (this.scheduledDate && !this.scheduledAt) {
+    this.scheduledAt = this.scheduledDate;
+  } else if (this.scheduledAt && !this.scheduledDate) {
+    this.scheduledDate = this.scheduledAt;
+  }
+
+  // Ensure baseFare and price are synchronized
   if (this.baseFare === 0 && this.price > 0) {
     this.baseFare = this.price;
   } else if (this.price === 0 && this.baseFare > 0) {
@@ -209,7 +267,7 @@ bookingSchema.pre("save", function (next) {
 
   this.totalAmount = (Number(this.baseFare) || Number(this.price) || 0) + paidAddons;
 
-  // Auto-sync aliases
+  // Auto-sync Razorpay aliases
   if (this.razorpayOrderId && !this.paymentOrderId) {
     this.paymentOrderId = this.razorpayOrderId;
   } else if (this.paymentOrderId && !this.razorpayOrderId) {
@@ -222,13 +280,26 @@ bookingSchema.pre("save", function (next) {
     this.razorpayPaymentId = this.paymentId;
   }
 
+  if (this.razorpaySignature && !this.paymentSignature) {
+    this.paymentSignature = this.razorpaySignature;
+  } else if (this.paymentSignature && !this.razorpaySignature) {
+    this.razorpaySignature = this.paymentSignature;
+  }
+
+  // Auto-compute fair distribution
+  const total = Number(this.totalAmount || this.baseFare || 0);
+  this.distribution = {
+    workerPayout: Math.round(total * 0.95),
+    mutualWelfare: Math.round(total * 0.05),
+    platformFee: 0,
+  };
+
   next();
 });
 
-bookingSchema.index({ serviceCategory: 1, scheduledAt: 1 });
+bookingSchema.index({ customerId: 1, requestStatus: 1 });
+bookingSchema.index({ workerId: 1, requestStatus: 1 });
+bookingSchema.index({ serviceCategory: 1, scheduledDate: 1 });
 bookingSchema.index({ "location.coordinates": "2dsphere" });
-bookingSchema.index({ customerId: 1, status: 1 });
-bookingSchema.index({ workerId: 1, status: 1 });
-bookingSchema.index({ paymentStatus: 1, autoReleaseAt: 1 });
 
 export default mongoose.models.Booking || mongoose.model("Booking", bookingSchema);

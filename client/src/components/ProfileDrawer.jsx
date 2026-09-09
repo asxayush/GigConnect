@@ -2,6 +2,7 @@ import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
 import { auth } from "../auth";
+import { getAvatar } from "../assets/avatars";
 
 export default function ProfileDrawer({
   isOpen,
@@ -28,10 +29,7 @@ export default function ProfileDrawer({
   const userName = activeUser?.name || "Member Customer";
   const userPhone = activeUser?.phone || "+91 98110 12345";
   const userRole = activeUser?.role || "customer";
-  const avatarUrl =
-    activeUser?.avatar ||
-    activeUser?.photoURL ||
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";
+  const avatarUrl = getAvatar(activeUser);
 
   const handleNav = (targetView) => {
     onNavigate(targetView);
@@ -96,7 +94,7 @@ export default function ProfileDrawer({
                       alt={userName}
                       className="w-12 h-12 rounded-xl object-cover border border-slate-200 shadow-xs"
                       onError={(e) => {
-                        e.target.src = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";
+                        e.target.src = DEFAULT_MALE_AVATAR;
                       }}
                     />
                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 rounded-full ring-2 ring-white" />
