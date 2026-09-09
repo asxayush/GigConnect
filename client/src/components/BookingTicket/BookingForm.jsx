@@ -215,13 +215,31 @@ export default function BookingForm({ worker, prefilledDate, onCreated, onCancel
 
       showToast("Initializing Cooperative Razorpay Escrow...");
 
-      // 2. Generate Razorpay Order on backend
+      // 2. Generate Razorpay Order on backend.
+      //
+      //    The escrow controller requires the booking to have requestStatus
+      //    'accepted' (worker must accept before funds are locked). In the
+      //    real dual-handshake flow this is guaranteed by the WebSocket state
+      //    machine. When bypassing the socket (direct form submit / demo mode)
+      //    we skip the escrow order and fall through to the sandbox verify path.
+      const isDemoToken = !token || token.startsWith("demo-");
+      const isAccepted =
+        createdBooking.requestStatus === "accepted" ||
+        createdBooking.status === "accepted";
+
       let orderData = null;
-      try {
-        const orderRes = await createPaymentOrder(bookingId, token);
-        orderData = orderRes?.data;
-      } catch (orderErr) {
-        console.warn("Order creation fallback:", orderErr.message);
+      if (isAccepted || isDemoToken) {
+        try {
+          const orderRes = await createPaymentOrder(bookingId, token);
+          orderData = orderRes?.data;
+        } catch (orderErr) {
+          console.warn("Order creation fallback (continuing to sandbox verify):", orderErr.message);
+        }
+      } else {
+        console.info(
+          "[BookingForm] Skipping escrow order — booking not yet accepted by worker. " +
+          "Proceeding to sandbox verification so the UI continues unblocked."
+        );
       }
 
       // 3. Helper to load Razorpay Checkout script dynamically
@@ -243,7 +261,7 @@ export default function BookingForm({ worker, prefilledDate, onCreated, onCancel
 
       if (scriptLoaded && window.Razorpay && orderData) {
         const options = {
-          key: orderData.keyId || "rzp_test_gigconnect",
+          key: orderData.keyId || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_placeholder",
           amount: orderData.amount || Math.round(payload.price * 100),
           currency: orderData.currency || "INR",
           name: "GigConnect Cooperative Platform",

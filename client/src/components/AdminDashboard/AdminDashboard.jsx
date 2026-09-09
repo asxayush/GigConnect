@@ -12,7 +12,7 @@ function AdminDashboard() {
     const { t } = useTranslation();
     const reduceMotion = useReducedMotion();
     const [overview, setOverview] = useState(null);
-    const token = localStorage.getItem("gigconnect_token") || "demo-admin-token";
+    const token = localStorage.getItem("gigconnect_token") || localStorage.getItem("gig_token") || "";
     const [state, setState] = useState("loading");
     const [message, setMessage] = useState("");
     const transition = reduceMotion ? { duration: 0 } : { duration: 0.45, ease: "easeOut" };

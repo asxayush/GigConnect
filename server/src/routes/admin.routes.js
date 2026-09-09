@@ -7,8 +7,9 @@ import { requireAuth, requireRole } from "../middlewares/auth.js";
 
 const router = Router();
 
-// Allow admin & coordinator or general transparency for overview
-router.get("/overview", async (request, response, next) => {
+// Overview is accessible to any authenticated user (JWT required).
+// Sensitive admin actions (worker review, pending KYC) retain requireRole guards.
+router.get("/overview", requireAuth, async (request, response, next) => {
     try {
         const [pendingWorkers, activeWorkers, bookingVolume, demand, areaGroupRaw, peakHoursRaw] = await Promise.all([
             WorkerProfile.find({ verificationStatus: "pending" }).populate("userId", "name phone location").sort({ createdAt: -1 }),

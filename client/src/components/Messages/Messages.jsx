@@ -260,6 +260,7 @@ export default function Messages({ initialWorker, onNavigate }) {
   }, [activeChat?.messages, isTyping, showBidModal]);
 
   // ================= 1. SOCKET.IO INTEGRATION =================
+  // Connect once on mount; never reconnect just because the active chat changed.
   useEffect(() => {
     const socket = io(BACKEND_URL, {
       transports: ["websocket", "polling"],
@@ -270,14 +271,18 @@ export default function Messages({ initialWorker, onNavigate }) {
 
     socket.on("connect", () => {
       setSocketConnected(true);
-      socket.emit("join_chat", { conversationId: activeChatId });
+      // Join whichever chat is currently active when the connection first opens.
+      // Subsequent chat switches are handled by the effect below.
+      const currentChatId = socketRef.current?._activeChatId;
+      if (currentChatId) socket.emit("join_chat", { conversationId: currentChatId });
     });
 
     socket.on("disconnect", () => {
       setSocketConnected(false);
     });
 
-    // Listen for regular and bid messages
+    // Listen for regular and bid messages — uses functional setState so it
+    // never closes over a stale activeChatId value.
     socket.on("receive_message", (data) => {
       if (!data) return;
 
@@ -300,7 +305,7 @@ export default function Messages({ initialWorker, onNavigate }) {
 
       setChats((prevChats) =>
         prevChats.map((c) =>
-          c._id === data.conversationId || c._id === activeChatId
+          c._id === data.conversationId
             ? {
                 ...c,
                 lastMessage: data.text,
@@ -319,7 +324,7 @@ export default function Messages({ initialWorker, onNavigate }) {
 
       setChats((prevChats) =>
         prevChats.map((c) =>
-          c._id === data.conversationId || c._id === activeChatId
+          c._id === data.conversationId
             ? {
                 ...c,
                 lastMessage: `🎉 Fare Accepted at ₹${data.agreedPrice}`,
@@ -332,18 +337,30 @@ export default function Messages({ initialWorker, onNavigate }) {
       );
     });
 
-    // Typing indicators
+    // Typing indicators — read activeChatId via the ref set in the effect below
     socket.on("typing", (data) => {
-      if (data.conversationId === activeChatId) setIsTyping(true);
+      if (data.conversationId === socketRef.current?._activeChatId) setIsTyping(true);
     });
 
     socket.on("stop_typing", (data) => {
-      if (data.conversationId === activeChatId) setIsTyping(false);
+      if (data.conversationId === socketRef.current?._activeChatId) setIsTyping(false);
     });
 
     return () => {
       socket.disconnect();
     };
+  }, []); // ← empty dep array: connect exactly once
+
+  // When the user switches chats, tell the server which room to join.
+  // This does NOT recreate the socket connection.
+  useEffect(() => {
+    if (!socketRef.current) return;
+    // Store current chat id on the ref so event handlers above can read it
+    // without stale closure issues.
+    socketRef.current._activeChatId = activeChatId;
+    if (socketRef.current.connected) {
+      socketRef.current.emit("join_chat", { conversationId: activeChatId });
+    }
   }, [activeChatId]);
 
   const handleSelectChat = (chatId) => {

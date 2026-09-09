@@ -69,7 +69,7 @@ export default function SahayataFAB({ onNavigate }) {
     }
   }, [messages, isTyping, isOpen]);
 
-  // Socket connection for grievance escalation
+  // Socket connection — created once on mount, never torn down on ticketId change.
   useEffect(() => {
     const socket = io(BACKEND_URL, {
       transports: ["websocket", "polling"],
@@ -85,35 +85,49 @@ export default function SahayataFAB({ onNavigate }) {
       showToast("🚨 Escalated to Federation Desk. A steward is reviewing!");
     });
 
-    socket.on("ticket_updated", (data) => {
-      if (data.ticketId === ticketId) {
-        if (data.status === "in-progress") {
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: "adm_" + Date.now(),
-              sender: "admin",
-              text: `👤 ${data.assignedAdmin || "Federation Steward"} has taken over this ticket. They are reviewing your case details right now.`,
-              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        } else if (data.status === "resolved") {
-          setTicketStatus("resolved");
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: "adm_res_" + Date.now(),
-              sender: "admin",
-              text: `✓ This support grievance has been marked as resolved by the Federation Desk. Thank you for being part of our cooperative.`,
-              time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-            },
-          ]);
-        }
-      }
-    });
-
     return () => {
       socket.disconnect();
+    };
+  }, []); // ← empty dep array: connect exactly once
+
+  // Re-register ticket_updated whenever ticketId changes so the handler
+  // always compares against the latest ticketId without reconnecting.
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    const handleTicketUpdated = (data) => {
+      if (data.ticketId !== ticketId) return;
+
+      if (data.status === "in-progress") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: "adm_" + Date.now(),
+            sender: "admin",
+            text: `👤 ${data.assignedAdmin || "Federation Steward"} has taken over this ticket. They are reviewing your case details right now.`,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+      } else if (data.status === "resolved") {
+        setTicketStatus("resolved");
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: "adm_res_" + Date.now(),
+            sender: "admin",
+            text: `✓ This support grievance has been marked as resolved by the Federation Desk. Thank you for being part of our cooperative.`,
+            time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+          },
+        ]);
+      }
+    };
+
+    socket.on("ticket_updated", handleTicketUpdated);
+
+    // Clean up old listener before next ticketId value is registered.
+    return () => {
+      socket.off("ticket_updated", handleTicketUpdated);
     };
   }, [ticketId]);
 
