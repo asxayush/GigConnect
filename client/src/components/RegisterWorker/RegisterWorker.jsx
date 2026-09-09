@@ -566,7 +566,7 @@ export default function RegisterWorker({ onNavigate }) {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-space-4 mb-space-6">
-                <div>
+                <div className="md:col-span-2">
                   <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1 font-bold">
                     Primary Skilled Trade
                   </label>
@@ -575,8 +575,36 @@ export default function RegisterWorker({ onNavigate }) {
                     value={workerData.trade}
                     onChange={(e) => handleFieldChange("trade", e.target.value)}
                     placeholder="e.g. Master Electrician & Wireman"
-                    className="w-full bg-surface-container-low px-space-4 py-space-3 rounded-xl text-on-surface font-body-md border border-border-tone/30 focus:outline-none focus:ring-2 focus:ring-primary"
+                    className="w-full bg-surface-container-low px-space-4 py-space-3 rounded-xl text-on-surface font-body-md border border-border-tone/30 focus:outline-none focus:ring-2 focus:ring-primary mb-2"
                   />
+                  {/* 10 Guild Quick-Picks */}
+                  <div className="flex flex-wrap gap-1.5 mt-1">
+                    {[
+                      "Electrician",
+                      "Plumber",
+                      "Carpenter",
+                      "Painter",
+                      "Domestic Helper",
+                      "Caregiver",
+                      "Driver",
+                      "Gardener",
+                      "Cleaner",
+                      "Technician",
+                    ].map((tradeName) => (
+                      <button
+                        key={tradeName}
+                        type="button"
+                        onClick={() => handleFieldChange("trade", tradeName)}
+                        className={`px-2.5 py-1 text-[11px] font-bold rounded-lg border transition-all cursor-pointer ${
+                          workerData.trade === tradeName
+                            ? "bg-primary text-white border-primary shadow-xs"
+                            : "bg-surface-container text-on-surface-variant border-border-tone/30 hover:bg-surface-container-high"
+                        }`}
+                      >
+                        {tradeName}
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div>
                   <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1 font-bold">

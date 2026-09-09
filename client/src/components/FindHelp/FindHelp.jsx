@@ -44,28 +44,36 @@ export default function FindHelp({ onNavigate }) {
   }, []);
 
   const serviceOptions = [
-    { id: "all", label: "All Crafts & Trades", icon: "handyman", count: "142 Pros" },
-    { id: "electrical", label: "Electrical & Home Power", icon: "bolt", count: "32 Pros" },
-    { id: "cleaning", label: "Deep Cleaning & Care", icon: "cleaning_services", count: "44 Pros" },
-    { id: "carpentry", label: "Carpentry & Furniture", icon: "carpenter", count: "18 Pros" },
-    { id: "appliance", label: "Appliance & HVAC Repair", icon: "mode_fan", count: "21 Pros" },
-    { id: "plumbing", label: "Plumbing & Sanitary", icon: "plumbing", count: "38 Pros" },
-    { id: "cooking", label: "Home Cooking & Meals", icon: "skillet", count: "13 Pros" },
+    { id: "all", label: "All Crafts & Trades", icon: "handyman", count: "250+ Pros" },
+    { id: "electrical", label: "Electricians & Power", icon: "bolt", count: "36 Pros" },
+    { id: "plumbing", label: "Plumbers & Sanitary", icon: "plumbing", count: "38 Pros" },
+    { id: "carpentry", label: "Carpenters & Woodcraft", icon: "carpenter", count: "24 Pros" },
+    { id: "painting", label: "Painters & Wall Decor", icon: "format_paint", count: "22 Pros" },
+    { id: "domestic", label: "Domestic Helpers & Chores", icon: "home_work", count: "45 Pros" },
+    { id: "caregiving", label: "Caregivers & Elder Care", icon: "health_and_safety", count: "19 Pros" },
+    { id: "driver", label: "Drivers & Chauffeurs", icon: "directions_car", count: "28 Pros" },
+    { id: "gardening", label: "Gardeners & Landscaping", icon: "yard", count: "16 Pros" },
+    { id: "cleaning", label: "Deep Cleaners & Sanitization", icon: "cleaning_services", count: "44 Pros" },
+    { id: "technician", label: "Technicians & Appliance/HVAC", icon: "mode_fan", count: "26 Pros" },
   ];
 
   const activeService = serviceOptions.find((opt) => opt.id === selectedCategory) || serviceOptions[0];
 
   const categoryChips = [
-    { id: "all", label: "All Services (142)" },
-    { id: "electrical", label: "Electricians (32)" },
-    { id: "cleaning", label: "Cleaning & Care (44)" },
-    { id: "carpentry", label: "Carpentry (18)" },
-    { id: "appliance", label: "Appliance Repair (21)" },
-    { id: "plumbing", label: "Plumbing (38)" },
-    { id: "cooking", label: "Home Chefs (13)" },
+    { id: "all", label: "All Services (250+)" },
+    { id: "electrical", label: "Electricians (36)" },
+    { id: "plumbing", label: "Plumbers (38)" },
+    { id: "carpentry", label: "Carpenters (24)" },
+    { id: "painting", label: "Painters (22)" },
+    { id: "domestic", label: "Domestic Helpers (45)" },
+    { id: "caregiving", label: "Caregivers (19)" },
+    { id: "driver", label: "Drivers (28)" },
+    { id: "gardening", label: "Gardeners (16)" },
+    { id: "cleaning", label: "Cleaners (44)" },
+    { id: "technician", label: "Technicians (26)" },
   ];
 
-  // Curated list of 5 seeded Delhi NCR workers + cooperative guild members
+  // Curated list of verified cooperative Delhi NCR workers across all 10 guilds
   const workers = [
     {
       id: "w1",
@@ -90,12 +98,12 @@ export default function FindHelp({ onNavigate }) {
       name: "Sunita Devi",
       craft: "cleaning",
       gender: "Female",
-      role: "Beautician & Deep Cleaning Lead (8 yrs exp)",
+      role: "Deep Cleaning & Sanitization Lead (8 yrs exp)",
       rating: "4.90",
       jobs: "420 jobs completed",
       credential: "♀ Sakhi Trust Lead Guild",
       credentialIcon: "award_star",
-      skills: ["Skin & Hair Care", "Full Home Sanitization", "Eco Chemicals"],
+      skills: ["Full Home Sanitization", "Sofa & Carpet Wash", "Eco Chemicals"],
       rateType: "hourly rate",
       rate: "₹400",
       hourlyRate: 400,
@@ -124,7 +132,7 @@ export default function FindHelp({ onNavigate }) {
     {
       id: "w4",
       name: "Priya Sharma",
-      craft: "appliance",
+      craft: "technician",
       gender: "Female",
       role: "ITI Appliance & AC Maintenance Technician (7 yrs exp)",
       rating: "4.70",
@@ -159,21 +167,93 @@ export default function FindHelp({ onNavigate }) {
     },
     {
       id: "w6",
-      name: "Meenakshi Sundaram",
-      craft: "cooking",
+      name: "Kavita Rao",
+      craft: "domestic",
       gender: "Female",
-      role: "Home Chef & Regional Meal Prep Specialist",
-      rating: "4.95",
-      jobs: "280 jobs completed",
-      credential: "♀ Sakhi Hygiene Certified",
-      credentialIcon: "restaurant",
-      skills: ["North/South Indian", "Party Meals", "Low-Oil Diet"],
+      role: "Certified Domestic Helper & Housekeeping Specialist",
+      rating: "4.92",
+      jobs: "340 jobs completed",
+      credential: "♀ Sakhi Household Guild",
+      credentialIcon: "home_work",
+      skills: ["Daily Housekeeping", "Meal Assistance", "Wardrobe Organization"],
       rateType: "hourly rate",
-      rate: "₹350",
+      rate: "₹200",
+      hourlyRate: 200,
+      sakhiVerified: true,
+      area: "Dwarka & West Delhi",
+      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w7",
+      name: "Shanti Devi",
+      craft: "caregiving",
+      gender: "Female",
+      role: "Elder Care & Patient Assistance Specialist (6 yrs exp)",
+      rating: "4.98",
+      jobs: "175 jobs completed",
+      credential: "♀ Sakhi Healthcare Guild",
+      credentialIcon: "health_and_safety",
+      skills: ["Geriatric Mobility", "Vital Signs Monitoring", "Medicine Reminders"],
+      rateType: "daily rate",
+      rate: "₹700",
       hourlyRate: 350,
       sakhiVerified: true,
-      area: "Saket & South Delhi",
-      image: "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=250&auto=format&fit=crop&q=80",
+      area: "Vasant Kunj & South Delhi",
+      image: "https://images.unsplash.com/photo-1580489944761-15a19d654956?w=250&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w8",
+      name: "Rajeshwar Yadav",
+      craft: "painting",
+      gender: "Male",
+      role: "Master Wall Painter & Texture Decorator (11 yrs exp)",
+      rating: "4.75",
+      jobs: "220 jobs completed",
+      credential: "Delhi Painters Co-op Guild",
+      credentialIcon: "format_paint",
+      skills: ["Interior Emulsion", "Waterproofing Putty", "Stencil & Texture Wall"],
+      rateType: "daily rate",
+      rate: "₹800",
+      hourlyRate: 300,
+      sakhiVerified: false,
+      area: "Laxmi Nagar & East Delhi",
+      image: "https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=250&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w9",
+      name: "Harish Chandra",
+      craft: "driver",
+      gender: "Male",
+      role: "Professional Personal Chauffeur & Highway Driver",
+      rating: "4.88",
+      jobs: "510 jobs completed",
+      credential: "Delhi Transport Guild #108",
+      credentialIcon: "directions_car",
+      skills: ["Automatic & Manual", "Outstation Trips", "Safe City Driving"],
+      rateType: "daily rate",
+      rate: "₹850",
+      hourlyRate: 350,
+      sakhiVerified: false,
+      area: "Gurugram & Delhi NCR",
+      image: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=250&auto=format&fit=crop&q=80",
+    },
+    {
+      id: "w10",
+      name: "Babulal Saini",
+      craft: "gardening",
+      gender: "Male",
+      role: "Horticulture Specialist & Terrace Landscaper (14 yrs exp)",
+      rating: "4.85",
+      jobs: "195 jobs completed",
+      credential: "NCR Horticulture Co-op",
+      credentialIcon: "yard",
+      skills: ["Bonsai & Terrace Gardens", "Lawn Mowing & Pruning", "Organic Fertilizer"],
+      rateType: "hourly rate",
+      rate: "₹250",
+      hourlyRate: 250,
+      sakhiVerified: false,
+      area: "Greater Kailash & Chanakyapuri",
+      image: "https://images.unsplash.com/photo-1492562080023-ab3db95bfbce?w=250&auto=format&fit=crop&q=80",
     },
   ];
 
@@ -182,12 +262,16 @@ export default function FindHelp({ onNavigate }) {
   useEffect(() => {
     const skillMap = {
       all: "",
-      plumbing: "Plumber",
       electrical: "Electrician",
-      cleaning: "Domestic help",
+      plumbing: "Plumber",
       carpentry: "Carpenter",
-      appliance: "Appliance",
-      cooking: "Home Cooking",
+      painting: "Painter",
+      domestic: "Domestic Helper",
+      caregiving: "Caregiver",
+      driver: "Driver",
+      gardening: "Gardener",
+      cleaning: "Cleaner",
+      technician: "Technician",
     };
     const targetSkill = skillMap[selectedCategory] || "";
     getWorkers(targetSkill)
@@ -197,10 +281,14 @@ export default function FindHelp({ onNavigate }) {
             const rawSkill = p.skills?.[0]?.toLowerCase() || "";
             const derivedCraft = rawSkill.includes("plumb") ? "plumbing"
               : rawSkill.includes("elect") ? "electrical"
-              : rawSkill.includes("clean") || rawSkill.includes("beaut") ? "cleaning"
               : rawSkill.includes("carp") ? "carpentry"
-              : rawSkill.includes("app") || rawSkill.includes("ac") ? "appliance"
-              : rawSkill.includes("cook") ? "cooking"
+              : rawSkill.includes("paint") ? "painting"
+              : rawSkill.includes("domest") || rawSkill.includes("house") ? "domestic"
+              : rawSkill.includes("care") || rawSkill.includes("elder") ? "caregiving"
+              : rawSkill.includes("driv") ? "driver"
+              : rawSkill.includes("garden") || rawSkill.includes("hort") ? "gardening"
+              : rawSkill.includes("clean") || rawSkill.includes("sanit") ? "cleaning"
+              : rawSkill.includes("tech") || rawSkill.includes("app") || rawSkill.includes("ac") ? "technician"
               : "all";
 
             return {

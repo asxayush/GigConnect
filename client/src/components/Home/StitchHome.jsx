@@ -170,13 +170,16 @@ export default function StitchHome({ onNavigate }) {
   const [selectedWorker, setSelectedWorker] = useState(ncrWorkers[0]);
 
   const categories = [
-    { name: "Plumbing", icon: "plumbing", count: "340+ Pros" },
-    { name: "Electrical", icon: "bolt", count: "280+ Pros" },
-    { name: "Deep Clean", icon: "cleaning_services", count: "Most Booked", highlight: true },
-    { name: "Cooking", icon: "skillet", count: "510+ Pros" },
-    { name: "Carpentry", icon: "carpenter", count: "190+ Pros" },
-    { name: "Appliances", icon: "mode_fan", count: "420+ Pros" },
-    { name: "Painting", icon: "format_paint", count: "165+ Pros" },
+    { name: "Electricians", icon: "bolt", count: "340+ Pros" },
+    { name: "Plumbers", icon: "plumbing", count: "280+ Pros" },
+    { name: "Carpenters", icon: "carpenter", count: "190+ Pros" },
+    { name: "Painters", icon: "format_paint", count: "165+ Pros" },
+    { name: "Domestic Helpers", icon: "home_work", count: "510+ Pros", highlight: true },
+    { name: "Caregivers", icon: "health_and_safety", count: "140+ Pros" },
+    { name: "Drivers", icon: "directions_car", count: "320+ Pros" },
+    { name: "Gardeners", icon: "yard", count: "125+ Pros" },
+    { name: "Cleaners", icon: "cleaning_services", count: "480+ Pros" },
+    { name: "Technicians", icon: "mode_fan", count: "290+ Pros" },
   ];
 
   const testimonials = [
@@ -480,7 +483,7 @@ export default function StitchHome({ onNavigate }) {
           </button>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {categories.map((cat, idx) => (
             <div
               key={idx}
@@ -508,7 +511,7 @@ export default function StitchHome({ onNavigate }) {
         </div>
       </section>
 
-      {/* 3. COOPERATIVE TRANSPARENCY: 92% DIRECT PAYOUT GUARANTEE */}
+      {/* 3. COOPERATIVE TRANSPARENCY: 0% PLATFORM FEE & 95% DIRECT PAYOUT */}
       <section className="max-w-max-content-width mx-auto px-margin-mobile md:px-margin-desktop py-10">
         <div className="rounded-3xl bg-primary text-on-primary p-8 md:p-12 relative overflow-hidden shadow-xl">
           <div className="max-w-2xl relative z-10">
@@ -519,12 +522,12 @@ export default function StitchHome({ onNavigate }) {
               Where Your Payment Actually Goes
             </h3>
             <p className="text-sm text-primary-fixed-dim mb-8 leading-relaxed">
-              Unlike venture-backed aggregators taking 25–35% in hidden commissions, GigConnect is owned 100% by its member tradespeople.
+              Unlike venture-backed aggregators taking 25–35% in hidden commissions, GigConnect operates with a 0% Platform Fee and is owned 100% by its member tradespeople.
             </p>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-4 border-t border-white/15">
               <div>
-                <div className="text-3xl font-extrabold text-secondary-fixed">92%</div>
+                <div className="text-3xl font-extrabold text-secondary-fixed">95%</div>
                 <div className="text-xs font-bold text-white mt-1">Direct to Worker</div>
                 <p className="text-[11px] text-primary-fixed-dim mt-0.5">Jan Dhan or UPI daily settlement</p>
               </div>
@@ -534,9 +537,9 @@ export default function StitchHome({ onNavigate }) {
                 <p className="text-[11px] text-primary-fixed-dim mt-0.5">Emergency healthcare & insurance</p>
               </div>
               <div>
-                <div className="text-3xl font-extrabold text-slate-300">3%</div>
-                <div className="text-xs font-bold text-white mt-1">Platform Tech & Server</div>
-                <p className="text-[11px] text-primary-fixed-dim mt-0.5">Flat audited operating cost</p>
+                <div className="text-3xl font-extrabold text-slate-300">0%</div>
+                <div className="text-xs font-bold text-white mt-1">Platform Fee (Zero Commission)</div>
+                <p className="text-[11px] text-primary-fixed-dim mt-0.5">Digital public infrastructure</p>
               </div>
             </div>
           </div>
