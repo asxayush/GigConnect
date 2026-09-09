@@ -1,8 +1,8 @@
 import mongoose from "mongoose";
 
 /**
- * Worker Schema for Aadhaar & Biometric Face Verification
- * Full 12-digit Aadhaar numbers are NEVER stored. Only masked string.
+ * Worker Schema for Aadhaar, Biometric Face Verification, Social Security & Legal Compliance
+ * Full 12-digit Aadhaar numbers are NEVER stored in the database. Only masked string.
  */
 const workerSchema = new mongoose.Schema(
   {
@@ -74,6 +74,20 @@ const workerSchema = new mongoose.Schema(
       name: { type: String, trim: true, default: "" },
       dob: { type: String, trim: true, default: "" },
       address: { type: String, trim: true, default: "" },
+    },
+    // Social Security & Worker Welfare Layer (§ Part 1)
+    socialSecurity: {
+      hasLifeInsurance: { type: Boolean, default: false },
+      providerName: { type: String, default: "PMJJBY / Cooperative Group Life" },
+      policyNumber: { type: String, default: "" },
+      enrolledViaCooperative: { type: Boolean, default: false },
+    },
+    // Legal Compliance & DPDP Act 2023 Consent Layer (§ Part 1)
+    legalConsent: {
+      termsAccepted: { type: Boolean, default: false },
+      privacyAccepted: { type: Boolean, default: false },
+      consentTimestamp: { type: Date, default: Date.now },
+      dpdpCompliant: { type: Boolean, default: true },
     },
     adminNotes: {
       type: String,

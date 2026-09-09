@@ -13,6 +13,18 @@ const workerProfileSchema = new mongoose.Schema(
     ratingAvg: { type: Number, default: 0 },
     ratingCount: { type: Number, default: 0 },
     jobsCompleted: { type: Number, default: 0 },
+    socialSecurity: {
+      hasLifeInsurance: { type: Boolean, default: false },
+      providerName: { type: String, default: "PMJJBY / Cooperative Group Life" },
+      policyNumber: { type: String, default: "" },
+      enrolledViaCooperative: { type: Boolean, default: false },
+    },
+    legalConsent: {
+      termsAccepted: { type: Boolean, default: false },
+      privacyAccepted: { type: Boolean, default: false },
+      consentTimestamp: { type: Date, default: Date.now },
+      dpdpCompliant: { type: Boolean, default: true },
+    },
     location: {
       type: { type: String, enum: ["Point"] },
       coordinates: { type: [Number] },

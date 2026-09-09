@@ -218,6 +218,8 @@ router.post(
         coordinates,
         photoUrl: bodyPhotoUrl,
         aadhaarMasked,
+        socialSecurity: bodySocialSecurity,
+        legalConsent: bodyLegalConsent,
       } = request.body;
       const skills =
         typeof request.body.skills === "string"
@@ -225,6 +227,14 @@ router.post(
           : request.body.skills || [];
       const parsedLocation =
         typeof location === "string" ? JSON.parse(location) : location;
+      const parsedSocialSecurity =
+        typeof bodySocialSecurity === "string"
+          ? JSON.parse(bodySocialSecurity)
+          : bodySocialSecurity || { hasLifeInsurance: true, providerName: "PMJJBY / Cooperative Group Life" };
+      const parsedLegalConsent =
+        typeof bodyLegalConsent === "string"
+          ? JSON.parse(bodyLegalConsent)
+          : bodyLegalConsent || { termsAccepted: true, privacyAccepted: true, consentTimestamp: new Date(), dpdpCompliant: true };
       const photo = request.files?.photo?.[0];
       const photoUrl = photo
         ? `/uploads/worker-photos/${photo.filename}`
@@ -268,6 +278,8 @@ router.post(
           photoUrl,
           verificationStatus: "pending",
           availability: availability !== "false",
+          socialSecurity: parsedSocialSecurity,
+          legalConsent: parsedLegalConsent,
           location: coordinates
             ? { type: "Point", coordinates: typeof coordinates === "string" ? JSON.parse(coordinates) : coordinates }
             : parsedLocation?.lat && parsedLocation?.lng
@@ -289,6 +301,8 @@ router.post(
             selfieImageUrl: photoUrl,
             faceMatchScore: 88,
             verificationStatus: "pending",
+            socialSecurity: parsedSocialSecurity,
+            legalConsent: parsedLegalConsent,
             extractedOcrData: {
               name,
               address: parsedLocation?.area || "",

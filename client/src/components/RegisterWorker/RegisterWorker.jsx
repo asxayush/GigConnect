@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { useTranslation } from "react-i18next";
 import AadhaarModal from "../AadhaarModal/AadhaarModal";
+import LegalModal from "../LegalModal";
 import { registerWorker } from "../../api";
 import { showToast } from "../../toast";
 
@@ -10,6 +11,28 @@ export default function RegisterWorker({ onNavigate }) {
   const [isSuccess, setIsSuccess] = useState(false);
   const [showAadhaarModal, setShowAadhaarModal] = useState(false);
   const [isAadhaarVerified, setIsAadhaarVerified] = useState(false);
+
+  // Social Security & Insurance State (§ Part 3)
+  const [insuranceOption, setInsuranceOption] = useState("cooperative"); // 'existing' | 'cooperative'
+  const [policyNumber, setPolicyNumber] = useState("");
+  const [providerName, setProviderName] = useState("PMJJBY / e-Shram Linked Insurance");
+
+  // Legal Consent Checkbox & Modal State (§ Part 3)
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [privacyAccepted, setPrivacyAccepted] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState("terms"); // 'terms' | 'privacy'
+
+  const openLegalModal = (tab) => {
+    setLegalModalTab(tab);
+    setShowLegalModal(true);
+  };
+
+  const handleLegalAgree = (tab) => {
+    if (tab === "terms") setTermsAccepted(true);
+    if (tab === "privacy") setPrivacyAccepted(true);
+    showToast(`✓ Accepted ${tab === "terms" ? "Cooperative Terms & Conditions" : "DPDP Privacy Policy"}`);
+  };
 
   // Form State initialized to empty defaults for new registrations
   const [workerData, setWorkerData] = useState({
@@ -61,6 +84,18 @@ export default function RegisterWorker({ onNavigate }) {
         aadhaarMasked: workerData.aadhaarMasked,
         verificationStatus: "pending",
         photoUrl: "https://images.unsplash.com/photo-1544717305-2782549b5136?w=400&auto=format&fit=crop&q=80",
+        socialSecurity: {
+          hasLifeInsurance: true,
+          providerName: insuranceOption === "existing" ? (providerName || "e-Shram Linked Insurance") : "PMJJBY / Cooperative Group Life",
+          policyNumber: insuranceOption === "existing" ? policyNumber : "COOP-PMJJBY-PENDING",
+          enrolledViaCooperative: insuranceOption === "cooperative",
+        },
+        legalConsent: {
+          termsAccepted: true,
+          privacyAccepted: true,
+          consentTimestamp: new Date(),
+          dpdpCompliant: true,
+        },
       };
 
       try {
@@ -447,6 +482,175 @@ export default function RegisterWorker({ onNavigate }) {
 
               </div>
 
+              {/* ================= 4. WORKER SOCIAL SECURITY CARD (§ Part 3.1) ================= */}
+              <div className="bg-surface-container-low rounded-2xl p-space-5 border border-border-tone/30 mb-space-6 shadow-xs">
+                <div className="flex items-center justify-between pb-space-3 mb-space-4 border-b border-border-tone/20">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-xl bg-primary text-white flex items-center justify-center font-bold">
+                      <span className="material-symbols-outlined text-[18px]">health_and_safety</span>
+                    </div>
+                    <div>
+                      <h3 className="text-sm font-bold text-primary m-0">
+                        Worker Social Security &amp; Group Life Insurance
+                      </h3>
+                      <span className="text-[11px] text-on-surface-variant font-medium">
+                        Mandatory welfare coverage for verified cooperative tradespeople
+                      </span>
+                    </div>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 border border-emerald-300">
+                    Welfare Protected
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {/* Option B: Sahakari Group Life Insurance */}
+                  <label
+                    className={`p-3.5 rounded-xl border flex items-start gap-3 cursor-pointer transition-all ${
+                      insuranceOption === "cooperative"
+                        ? "bg-white border-primary ring-2 ring-primary/20 shadow-xs"
+                        : "bg-surface-container border-border-tone/30 hover:bg-white"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="insuranceOption"
+                      value="cooperative"
+                      checked={insuranceOption === "cooperative"}
+                      onChange={() => setInsuranceOption("cooperative")}
+                      className="mt-0.5 accent-primary cursor-pointer w-4 h-4"
+                    />
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between gap-2">
+                        <strong className="text-xs font-bold text-slate-900 block">
+                          Enroll in Sahakari Group Life Insurance (₹436 / year)
+                        </strong>
+                        <span className="text-[10px] font-extrabold text-primary bg-primary/10 px-2 py-0.5 rounded-md">
+                          PMJJBY Linked
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-600 m-0 mt-0.5 leading-relaxed">
+                        Full ₹2 Lakh life &amp; ₹2 Lakh permanent accidental disability cover. ₹436/year premium deducted in micro-installments from cooperative payouts with zero upfront cash.
+                      </p>
+                    </div>
+                  </label>
+
+                  {/* Option A: Existing Insurance */}
+                  <label
+                    className={`p-3.5 rounded-xl border flex flex-col gap-2.5 cursor-pointer transition-all ${
+                      insuranceOption === "existing"
+                        ? "bg-white border-primary ring-2 ring-primary/20 shadow-xs"
+                        : "bg-surface-container border-border-tone/30 hover:bg-white"
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="radio"
+                        name="insuranceOption"
+                        value="existing"
+                        checked={insuranceOption === "existing"}
+                        onChange={() => setInsuranceOption("existing")}
+                        className="mt-0.5 accent-primary cursor-pointer w-4 h-4"
+                      />
+                      <div className="flex-1">
+                        <strong className="text-xs font-bold text-slate-900 block">
+                          I have existing Life/Accident Insurance (e-Shram linked)
+                        </strong>
+                        <p className="text-[11px] text-slate-600 m-0 mt-0.5">
+                          Provide your 12-digit e-Shram Universal Account Number (UAN) or existing policy number for statutory federation record.
+                        </p>
+                      </div>
+                    </div>
+
+                    {insuranceOption === "existing" && (
+                      <div className="pl-7 pr-2 pt-1 grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                            Policy Number / e-Shram UAN
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. UAN-9842-1102-4928"
+                            value={policyNumber}
+                            onChange={(e) => setPolicyNumber(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 font-mono focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[11px] font-bold text-slate-700 block mb-1">
+                            Insurance Provider / Scheme
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. PMJJBY / LIC of India"
+                            value={providerName}
+                            onChange={(e) => setProviderName(e.target.value)}
+                            className="w-full bg-slate-50 border border-slate-300 rounded-lg px-3 py-1.5 text-xs text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary"
+                          />
+                        </div>
+                      </div>
+                    )}
+                  </label>
+                </div>
+              </div>
+
+              {/* ================= 5. LEGAL CONSENT CHECKBOXES (§ Part 3.2) ================= */}
+              <div className="p-space-4 mb-space-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-3">
+                <span className="text-[11px] font-extrabold text-slate-500 uppercase tracking-wider block">
+                  Legal Compliance &amp; Consent Declarations
+                </span>
+
+                {/* Checkbox 1: Terms */}
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={termsAccepted}
+                    onChange={(e) => setTermsAccepted(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded-md accent-slate-900 cursor-pointer"
+                  />
+                  <div className="text-xs text-slate-800 leading-snug">
+                    <span>I accept and agree to the </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openLegalModal("terms");
+                      }}
+                      className="font-bold text-primary underline hover:text-slate-900 p-0 border-none bg-transparent cursor-pointer inline"
+                    >
+                      Cooperative Terms &amp; Conditions
+                    </button>
+                    <span> governing zero platform fees, mutual welfare, and floor wage protection.</span>
+                  </div>
+                </label>
+
+                {/* Checkbox 2: Privacy */}
+                <label className="flex items-start gap-3 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={privacyAccepted}
+                    onChange={(e) => setPrivacyAccepted(e.target.checked)}
+                    className="mt-0.5 w-4 h-4 rounded-md accent-slate-900 cursor-pointer"
+                  />
+                  <div className="text-xs text-slate-800 leading-snug">
+                    <span>I have read and give explicit consent under the </span>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        openLegalModal("privacy");
+                      }}
+                      className="font-bold text-primary underline hover:text-slate-900 p-0 border-none bg-transparent cursor-pointer inline"
+                    >
+                      DPDP Act 2023 Compliant Privacy Policy
+                    </button>
+                    <span> for secure masked ID storage and localized domestic processing.</span>
+                  </div>
+                </label>
+              </div>
+
               {/* Step 4 Action Buttons */}
               <div className="flex flex-col-reverse sm:flex-row items-center justify-between gap-space-4 pt-space-4 border-t border-border-tone/30">
                 <button
@@ -458,11 +662,21 @@ export default function RegisterWorker({ onNavigate }) {
                   <span>Back to Aadhaar e-KYC</span>
                 </button>
 
+                {/* Final Submit Button strictly gated by legal consent */}
                 <button
                   type="button"
                   onClick={handleFinalSubmit}
-                  disabled={isSubmitting}
-                  className="w-full sm:w-auto px-space-8 py-space-3 rounded-xl bg-secondary-container text-on-secondary font-label-lg text-label-lg font-bold shadow-lg hover:opacity-95 active:scale-95 transition-all flex items-center justify-center gap-space-2 border-none cursor-pointer disabled:opacity-50"
+                  disabled={!termsAccepted || !privacyAccepted || isSubmitting}
+                  className={`w-full sm:w-auto px-space-8 py-space-3 rounded-xl font-label-lg text-label-lg font-bold shadow-lg transition-all flex items-center justify-center gap-space-2 border-none ${
+                    termsAccepted && privacyAccepted && !isSubmitting
+                      ? "bg-slate-900 hover:bg-slate-800 text-white cursor-pointer active:scale-95 shadow-md"
+                      : "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                  }`}
+                  title={
+                    !termsAccepted || !privacyAccepted
+                      ? "Please agree to the Terms & Conditions and DPDP Privacy Policy before submitting."
+                      : "Submit membership application"
+                  }
                 >
                   {isSubmitting ? (
                     <>
@@ -1072,6 +1286,14 @@ export default function RegisterWorker({ onNavigate }) {
           onVerified={handleAadhaarVerified}
         />
       )}
+
+      {/* DPDP Act 2023 & Cooperative Terms Legal Modal */}
+      <LegalModal
+        isOpen={showLegalModal}
+        onClose={() => setShowLegalModal(false)}
+        initialTab={legalModalTab}
+        onAgree={handleLegalAgree}
+      />
     </div>
   );
 }
