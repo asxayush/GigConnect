@@ -5,7 +5,7 @@ import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import "leaflet/dist/leaflet.css";
 import { showToast } from "../toast";
-import { triggerSosAlert, verifyBookingOtp, completeBooking } from "../api";
+import { triggerSosAlert, verifyBookingOtp, completeBooking, API_URL } from "../api";
 
 // Leaflet default icon fix for Vite/Webpack environments
 delete L.Icon.Default.prototype._getIconUrl;
@@ -117,7 +117,7 @@ export default function ActiveBooking({ booking, onNavigate }) {
 
   // Sockets Connection & Live Tracking
   useEffect(() => {
-    const backendUrl = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
+    const backendUrl = API_URL;
     const socket = io(backendUrl, {
       transports: ["websocket", "polling"],
       reconnectionAttempts: 5,

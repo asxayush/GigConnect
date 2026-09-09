@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast } from "../../toast";
+import { API_URL } from "../../api";
 
-const BACKEND_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
+const BACKEND_URL = API_URL;
 
 export default function LiveSosQueue() {
   const [alerts, setAlerts] = useState([]);

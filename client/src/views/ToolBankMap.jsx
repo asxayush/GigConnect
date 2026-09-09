@@ -4,9 +4,9 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast } from "../toast";
-import { getToolInventory, rentToolItem, returnToolItem, getMyToolRentals } from "../api";
+import { getToolInventory, rentToolItem, returnToolItem, getMyToolRentals, API_URL } from "../api";
 
-const BACKEND_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
+const BACKEND_URL = API_URL;
 
 // Custom crisp SVG Pin for Leaflet
 const createCustomHubIcon = (color = "#ea580c", iconName = "construction") => {

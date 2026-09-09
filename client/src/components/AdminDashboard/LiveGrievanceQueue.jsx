@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { io } from "socket.io-client";
 import { showToast } from "../../toast";
+import { API_URL } from "../../api";
 
-const BACKEND_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
+const BACKEND_URL = API_URL;
 
 // Alert tone generator
 const playAlertSound = () => {
