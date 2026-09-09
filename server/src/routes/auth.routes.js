@@ -72,13 +72,29 @@ router.post("/register", async (request, response, next) => {
   }
 });
 
-// POST /api/auth/login — email/password sign in
+// POST /api/auth/login — email/phone and password sign in
 router.post("/login", async (request, response, next) => {
   try {
     const { email, phone, password } = request.body;
-    const user = await User.findOne(email ? { email } : { phone }).select(
-      "+passwordHash"
-    );
+    
+    let query = {};
+    if (email) {
+      query = { email: email.toLowerCase().trim() };
+    } else if (phone) {
+      const cleaned = phone.replace(/[\s()-]/g, "");
+      const rawDigits = cleaned.replace(/^\+91/, "");
+      query = {
+        $or: [
+          { phone: cleaned },
+          { phone: rawDigits },
+          { phone: `+91${rawDigits}` },
+        ],
+      };
+    } else {
+      return response.status(400).json({ success: false, message: "Email or mobile number is required" });
+    }
+
+    const user = await User.findOne(query).select("+passwordHash");
     if (
       !user ||
       !user.passwordHash ||
@@ -86,21 +102,25 @@ router.post("/login", async (request, response, next) => {
     ) {
       return response
         .status(401)
-        .json({ success: false, message: "Invalid credentials" });
+        .json({ success: false, message: "Invalid mobile number/email or password (Default Demo Password: Demo@123)" });
     }
+
     return response.json({
       success: true,
       data: {
         user: {
           id: user._id,
+          _id: user._id,
           name: user.name,
           email: user.email,
           phone: user.phone,
           role: user.role,
+          gender: user.gender,
+          avatar: user.avatar,
         },
         token: signToken(user),
       },
-      message: "Logged in",
+      message: `Logged in successfully as ${user.name} (${user.role})`,
     });
   } catch (error) {
     next(error);
@@ -200,17 +220,27 @@ router.post("/phone/verify", async (request, response, next) => {
           "Incorrect or expired OTP. Use the code received or try 123456.",
       });
     }
-    let user = await User.findOne({ phone });
-    if (!user) user = await User.create({ phone, name: phone, role: "customer" });
+    const rawDigits = phone.replace(/^\+91/, "");
+    let user = await User.findOne({
+      $or: [
+        { phone },
+        { phone: rawDigits },
+        { phone: `+91${rawDigits}` },
+      ],
+    });
+    if (!user) user = await User.create({ phone: rawDigits, name: `Member (${rawDigits.slice(0, 5)}...)`, role: "customer" });
     response.json({
       success: true,
       data: {
         user: {
           id: user._id,
+          _id: user._id,
           name: user.name,
           email: user.email,
           phone: user.phone,
           role: user.role,
+          gender: user.gender,
+          avatar: user.avatar,
         },
         token: signToken(user),
       },
