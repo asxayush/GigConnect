@@ -1,0 +1,35 @@
+# PRD & Documentation
+*prd*.md
+*PRD*.md
+prd.md
+detailedPrd.md
+PRD.md
+
+# Dependencies & Environment
+node_modules
+.env
+.env.*
+!.env.example
+
+# Build & Dist
+dist
+dist-ssr
+build
+.vercel
+
+# Logs & Temporary
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+uploads/
+
+# OS & Editor files
+.DS_Store
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

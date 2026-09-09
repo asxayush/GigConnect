@@ -1,6 +1,17 @@
+# Dependencies & Env
 node_modules
 .env
 .env.*
 !.env.example
+
+# PRD & Specs
+*prd*.md
+*PRD*.md
 prd.md
+detailedPrd.md
+PRD.md
+
+# Uploads & Logs
 uploads
+logs
+*.log
