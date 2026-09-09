@@ -1,7 +1,6 @@
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useTranslation } from "react-i18next";
-import { showToast } from "../toast";
 import { auth } from "../auth";
 
 export default function ProfileDrawer({
@@ -11,49 +10,56 @@ export default function ProfileDrawer({
   onNavigate,
   onToggleLanguage,
   currentLanguage,
+  user,
+  onLogout,
 }) {
   const { t } = useTranslation();
 
-  const userStr = typeof window !== "undefined" ? localStorage.getItem("gigconnect_user") : null;
-  let user = null;
-  try {
-    if (userStr) user = JSON.parse(userStr);
-  } catch (e) {}
+  // If user object not passed, load from localStorage
+  const activeUser = user || (() => {
+    try {
+      const saved = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  })();
 
-  const workerStatus = typeof window !== "undefined" ? localStorage.getItem("gigconnect_worker_status") : "verified";
-  const isVerifiedWorker = user?.role === "worker" || workerStatus === "verified";
-
-  const userName = user?.name || "Ramesh Kumar";
-  const userPhone = user?.phone || "+91 98110 12345";
-  const userEmail = user?.email || "ramesh.kumar@gigconnect.in";
+  const userName = activeUser?.name || "Member Customer";
+  const userPhone = activeUser?.phone || "+91 98110 12345";
+  const userRole = activeUser?.role || "customer";
   const avatarUrl =
-    user?.avatar ||
-    user?.photoURL ||
-    "/illustrations/electrician.jpg";
+    activeUser?.avatar ||
+    activeUser?.photoURL ||
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200&auto=format&fit=crop&q=80";
 
   const handleNav = (targetView) => {
     onNavigate(targetView);
     onClose();
   };
 
-  const handleLogout = () => {
-    // 1. Clear all user/auth session state
+  // State Management Bug Fix 2: Full session wipe & redirect
+  const handlePerformLogout = () => {
+    localStorage.removeItem("gig_token");
     localStorage.removeItem("gigconnect_token");
     localStorage.removeItem("gigconnect_user");
+    localStorage.removeItem("gig_user");
     localStorage.removeItem("gigconnect_role");
     localStorage.removeItem("gigconnect_worker_status");
-    localStorage.removeItem("gigconnect_phone");
-    localStorage.removeItem("gigconnect_auth_step");
-    localStorage.removeItem("gigconnect_signup_data");
     sessionStorage.clear();
 
-    // 2. Sign out Firebase if connected
     try {
       auth?.signOut().catch(() => {});
     } catch (e) {}
 
-    // 3. Full clean page reload back to base url
-    window.location.href = window.location.origin;
+    // Dispatch global event so all components react
+    window.dispatchEvent(new Event("gigconnect_auth_change"));
+
+    if (onLogout) {
+      onLogout();
+    }
+    onClose();
+    onNavigate("home");
   };
 
   return (
@@ -81,7 +87,7 @@ export default function ProfileDrawer({
               className="w-80 sm:w-96 h-screen bg-white shadow-2xl rounded-l-2xl border-l border-slate-200 flex flex-col pointer-events-auto overflow-hidden text-[#0A2540] relative z-[99999]"
             >
               
-              {/* Drawer Header */}
+              {/* Drawer Header: User Avatar, Name, Phone Number, Role Badge */}
               <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/60 flex-shrink-0">
                 <div className="flex items-center gap-3 min-w-0">
                   <div className="relative flex-shrink-0">
@@ -100,17 +106,22 @@ export default function ProfileDrawer({
                     <h3 className="text-sm font-black text-[#0A2540] truncate m-0 leading-tight">
                       {userName}
                     </h3>
-                    <p className="text-[11px] text-slate-500 truncate m-0 mt-0.5">
+                    <p className="text-[11px] text-slate-500 truncate m-0 mt-0.5 font-mono">
                       {userPhone}
                     </p>
                     <div className="mt-1">
-                      {isVerifiedWorker ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.2 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[10px] font-extrabold">
+                      {userRole === "worker" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded-md text-[10px] font-extrabold">
                           <span className="material-symbols-outlined text-[12px]">verified</span>
                           <span>Verified Worker</span>
                         </span>
+                      ) : userRole === "admin" ? (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-md text-[10px] font-extrabold">
+                          <span className="material-symbols-outlined text-[12px]">admin_panel_settings</span>
+                          <span>Federation Admin</span>
+                        </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.2 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[10px] font-bold">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-50 text-blue-700 border border-blue-200 rounded-md text-[10px] font-bold">
                           <span>Member Customer</span>
                         </span>
                       )}
@@ -128,70 +139,48 @@ export default function ProfileDrawer({
                 </button>
               </div>
 
-              {/* Drawer Scrollable Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-5 divide-y divide-slate-100 scrollbar-thin">
+              {/* Drawer Scrollable Links */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 divide-y divide-slate-100 scrollbar-thin">
                 
-                {/* Section 1: Customer Core */}
+                {/* Section 1: Messages / Chat (Moved into Sidebar) */}
                 <div className="space-y-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 block mb-1.5">
-                    Customer Services
+                    Communications
                   </span>
                   
                   <button
                     type="button"
-                    onClick={() => handleNav("booking")}
+                    onClick={() => handleNav("messages")}
                     className={`w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between transition-all border-none cursor-pointer ${
-                      view === "booking" || view === "detail"
-                        ? "bg-[#0A2540] text-white shadow-xs font-bold"
+                      view === "messages"
+                        ? "bg-[#075e54] text-white shadow-xs font-bold"
                         : "hover:bg-slate-50 text-[#0A2540] bg-transparent"
                     }`}
                   >
                     <div className="flex items-center gap-2.5">
-                      <span className={`material-symbols-outlined text-[20px] ${view === "booking" ? "text-white" : "text-slate-500"}`}>
-                        calendar_month
-                      </span>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${
+                        view === "messages" ? "bg-white/20 text-white" : "bg-emerald-50 text-[#00a884]"
+                      }`}>
+                        <span className="material-symbols-outlined text-[18px]">chat</span>
+                      </div>
                       <div>
-                        <span className="text-xs font-extrabold block">My Bookings</span>
-                        <span className={`text-[11px] block ${view === "booking" ? "text-slate-200" : "text-slate-400"}`}>
-                          View active &amp; past bookings
+                        <span className="text-xs font-extrabold block">Messages / Chat</span>
+                        <span className={`text-[11px] block ${view === "messages" ? "text-slate-100" : "text-slate-400"}`}>
+                          Direct real-time worker chats
                         </span>
                       </div>
                     </div>
-                    <span className="material-symbols-outlined text-[16px] text-slate-400">chevron_right</span>
+                    <span className="w-2 h-2 rounded-full bg-[#00a884] animate-pulse" />
                   </button>
                 </div>
 
-                {/* Section 2: Cooperative Hub (For Workers / Admins) */}
+                {/* Section 2: Federation & Worker Links */}
                 <div className="pt-4 space-y-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 block mb-1.5">
-                    Cooperative Guild Hub
+                    Cooperative Actions
                   </span>
 
-                  <button
-                    type="button"
-                    onClick={() => handleNav("tool-bank")}
-                    className={`w-full px-3 py-2.5 rounded-xl text-left flex items-center justify-between transition-all border-none cursor-pointer ${
-                      view === "tool-bank"
-                        ? "bg-[#0A2540] text-white shadow-xs font-bold"
-                        : "hover:bg-slate-50 text-[#0A2540] bg-transparent"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-orange-50 text-[#ea580c] flex items-center justify-center">
-                        <span className="material-symbols-outlined text-[18px]">construction</span>
-                      </div>
-                      <div>
-                        <span className="text-xs font-extrabold block">Tool Bank</span>
-                        <span className={`text-[11px] block ${view === "tool-bank" ? "text-slate-200" : "text-slate-400"}`}>
-                          0% Deposit equipment reserve
-                        </span>
-                      </div>
-                    </div>
-                    <span className="px-2 py-0.5 bg-orange-100 text-[#ea580c] text-[10px] font-extrabold rounded-md">
-                      Free
-                    </span>
-                  </button>
-
+                  {/* Register a Worker */}
                   <button
                     type="button"
                     onClick={() => handleNav("register")}
@@ -215,6 +204,7 @@ export default function ProfileDrawer({
                     <span className="material-symbols-outlined text-[16px] text-slate-400">chevron_right</span>
                   </button>
 
+                  {/* Federation Desk */}
                   <button
                     type="button"
                     onClick={() => handleNav("admin")}
@@ -239,10 +229,10 @@ export default function ProfileDrawer({
                   </button>
                 </div>
 
-                {/* Section 3: Preferences */}
+                {/* Section 3: Platform Preferences */}
                 <div className="pt-4 space-y-1">
                   <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider px-3 block mb-1.5">
-                    Platform Preferences
+                    Preferences
                   </span>
 
                   <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/80 flex items-center justify-between">
@@ -266,17 +256,17 @@ export default function ProfileDrawer({
 
               </div>
 
-              {/* Drawer Footer */}
+              {/* Drawer Footer: Working Log Out Button */}
               <div className="p-4 border-t border-slate-100 bg-slate-50/50 flex flex-col gap-2 flex-shrink-0">
                 <button
                   type="button"
-                  onClick={handleLogout}
-                  className="w-full py-2.5 px-3 rounded-xl text-left flex items-center gap-2 text-slate-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold transition-colors border-none bg-transparent cursor-pointer"
+                  onClick={handlePerformLogout}
+                  className="w-full py-2.5 px-3 rounded-xl text-left flex items-center gap-2 text-slate-600 hover:text-red-600 hover:bg-red-50 text-xs font-bold transition-colors border-none bg-transparent cursor-pointer group"
                 >
                   <span className="material-symbols-outlined text-[18px] text-slate-400 group-hover:text-red-500">
                     logout
                   </span>
-                  <span>Log Out of GigConnect</span>
+                  <span>Log Out</span>
                 </button>
 
                 <div className="flex items-center justify-between text-[10px] text-slate-400 px-1">

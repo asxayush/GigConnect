@@ -1,8 +1,6 @@
 import { Router } from "express";
 import { body } from "express-validator";
 import {
-  register,
-  login,
   loginWithFirebase,
   sendPhoneOtp,
   verifyPhoneOtp,
@@ -14,27 +12,10 @@ import { protect } from "../middleware/auth.js";
 
 const router = Router();
 
-router.post(
-  "/register",
-  authLimiter,
-  validate([
-    body("name").trim().notEmpty().withMessage("Name is required"),
-    body("password").isLength({ min: 6 }).withMessage("Password must be at least 6 characters"),
-  ]),
-  register
-);
-
-router.post(
-  "/login",
-  authLimiter,
-  validate([
-    body("password").notEmpty().withMessage("Password is required"),
-  ]),
-  login
-);
-
+// Firebase Google Auth
 router.post("/firebase", authLimiter, loginWithFirebase);
 
+// Mobile OTP Routes (Twilio / SMS)
 router.post(
   "/phone/send",
   otpLimiter,
@@ -54,6 +35,7 @@ router.post(
   verifyPhoneOtp
 );
 
+// Protected Profile Update
 router.patch("/profile", protect, updateProfile);
 
 export default router;

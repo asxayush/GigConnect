@@ -4,13 +4,9 @@ import { signInWithGoogle, getFirebaseIdToken } from "../../auth.js";
 import { loginWithFirebase, sendPhoneOtp, verifyPhoneOtp } from "../../api.js";
 import { showToast } from "../../toast.js";
 
-export default function SignUp({ onNavigate }) {
-  // Step 1: Phone Input | Step 2: OTP Verification | Step 3 (optional): Existing Session
-  const existingUserStr = localStorage.getItem("gigconnect_user");
-  const existingUser = existingUserStr ? JSON.parse(existingUserStr) : null;
-  const existingToken = localStorage.getItem("gigconnect_token");
-
-  const [step, setStep] = useState(existingUser && existingToken ? "session" : "phone");
+export default function SignUp({ onNavigate, setUser }) {
+  // Step 1: Phone Input | Step 2: OTP Verification
+  const [step, setStep] = useState("phone");
   const [phone, setPhone] = useState("");
   const [otpValues, setOtpValues] = useState(["", "", "", "", "", ""]);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +34,24 @@ export default function SignUp({ onNavigate }) {
     }
   };
 
+  // Helper to commit successful authentication to app state
+  const commitAuthSuccess = (authUser, token) => {
+    localStorage.setItem("gig_token", token);
+    localStorage.setItem("gigconnect_token", token);
+    localStorage.setItem("gigconnect_user", JSON.stringify(authUser));
+    localStorage.setItem("gig_user", JSON.stringify(authUser));
+
+    if (setUser) {
+      setUser(authUser);
+    }
+    window.dispatchEvent(new Event("gigconnect_auth_change"));
+
+    showToast(`Welcome to GigConnect, ${authUser.name || "Member"}!`);
+    if (onNavigate) {
+      onNavigate("find-help");
+    }
+  };
+
   // Step 1: Submit Phone Number -> Move to Step 2 (OTP)
   const handleSendOtp = async (e) => {
     e?.preventDefault();
@@ -52,7 +66,6 @@ export default function SignUp({ onNavigate }) {
     const fullPhone = `+91${phone}`;
 
     try {
-      // Call backend API if available
       const response = await sendPhoneOtp(fullPhone);
       if (response?.data?.demoOtp) {
         setGeneratedDemoCode(String(response.data.demoOtp));
@@ -63,12 +76,11 @@ export default function SignUp({ onNavigate }) {
       setStep("otp");
       showToast(`Verification code sent to ${fullPhone}`);
     } catch (err) {
-      console.warn("SMS Gateway note (using hackathon mock fallback):", err.message);
-      // Hackathon demo fallback: 123456
+      console.warn("SMS Gateway note (using fallback mock):", err.message);
       setGeneratedDemoCode("123456");
       setCountdown(30);
       setStep("otp");
-      showToast(`Demo OTP generated: 123456 for ${fullPhone}`);
+      showToast(`Demo OTP code: 123456 for ${fullPhone}`);
     } finally {
       setIsLoading(false);
     }
@@ -84,13 +96,11 @@ export default function SignUp({ onNavigate }) {
       return;
     }
 
-    // Single digit entry
     const newOtp = [...otpValues];
     newOtp[index] = cleaned.charAt(cleaned.length - 1);
     setOtpValues(newOtp);
     setErrorMessage("");
 
-    // Auto-focus next input
     if (index < 5 && cleaned) {
       otpInputsRef.current[index + 1]?.focus();
     }
@@ -108,7 +118,6 @@ export default function SignUp({ onNavigate }) {
     }
     setOtpValues(newOtp);
 
-    // Focus last filled or next empty box
     const nextIdx = Math.min(pasteData.length, 5);
     otpInputsRef.current[nextIdx]?.focus();
   };
@@ -139,20 +148,17 @@ export default function SignUp({ onNavigate }) {
       let authUser = null;
       let token = null;
 
-      // Check real or mock OTP
       if (enteredOtp === "123456" || enteredOtp === generatedDemoCode) {
         token = "jwt-session-" + Date.now();
         authUser = {
           _id: "user-" + phone,
           phone: fullPhone,
-          name: `Patron (+91 ${phone.slice(0, 5)}...)`,
+          name: `Member (+91 ${phone.slice(0, 5)}...)`,
           role: "customer",
           isPhoneVerified: true,
-          sakhiVerified: false,
           createdAt: new Date().toISOString(),
         };
       } else {
-        // Try backend verification API
         const response = await verifyPhoneOtp(fullPhone, enteredOtp);
         authUser = response?.data?.user;
         token = response?.data?.token;
@@ -162,16 +168,7 @@ export default function SignUp({ onNavigate }) {
         throw new Error("Invalid verification code. Please check or use demo code 123456.");
       }
 
-      // Save user session
-      localStorage.setItem("gigconnect_token", token);
-      localStorage.setItem("gigconnect_user", JSON.stringify(authUser));
-
-      showToast("Authentication successful! Welcome to GigConnect.");
-      if (onNavigate) {
-        onNavigate("find-help");
-      } else {
-        window.location.reload();
-      }
+      commitAuthSuccess(authUser, token);
     } catch (err) {
       console.error("Verification error:", err);
       setErrorMessage(err.message || "Invalid OTP. Use demo code 123456.");
@@ -200,7 +197,7 @@ export default function SignUp({ onNavigate }) {
         token = "google-demo-token-" + Date.now();
         backendUser = {
           _id: result.user.uid || "google-user-" + Date.now(),
-          name: result.user.displayName || "Google Patron",
+          name: result.user.displayName || "Google Member",
           email: result.user.email,
           avatar: result.user.photoURL,
           role: "customer",
@@ -216,15 +213,7 @@ export default function SignUp({ onNavigate }) {
         role: "customer",
       };
 
-      localStorage.setItem("gigconnect_token", token || "mock-google-token");
-      localStorage.setItem("gigconnect_user", JSON.stringify(finalUser));
-
-      showToast(`Welcome back, ${finalUser.name}!`);
-      if (onNavigate) {
-        onNavigate("find-help");
-      } else {
-        window.location.reload();
-      }
+      commitAuthSuccess(finalUser, token || "mock-google-token");
     } catch (err) {
       console.error("Google Auth error:", err);
       setErrorMessage("Google sign-in was cancelled or encountered an error.");
@@ -233,18 +222,8 @@ export default function SignUp({ onNavigate }) {
     }
   };
 
-  // Logout / Switch account
-  const handleLogout = () => {
-    localStorage.removeItem("gigconnect_token");
-    localStorage.removeItem("gigconnect_user");
-    setStep("phone");
-    setPhone("");
-    setOtpValues(["", "", "", "", "", ""]);
-    showToast("Logged out successfully.");
-  };
-
   return (
-    <div className="min-h-[85vh] w-full flex items-center justify-center bg-[#FAF8FF] px-4 py-12 relative overflow-hidden">
+    <div className="min-h-[85vh] w-full flex items-center justify-center bg-[#FAF8FF] px-4 py-12 relative overflow-hidden font-sans">
       {/* Subtle Ambient Decorative Glow */}
       <div className="absolute top-1/4 -left-20 w-96 h-96 bg-indigo-200/30 rounded-full blur-3xl pointer-events-none" />
       <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-emerald-200/30 rounded-full blur-3xl pointer-events-none" />
@@ -283,7 +262,7 @@ export default function SignUp({ onNavigate }) {
                 Welcome to GigConnect
               </h1>
               <p className="text-sm text-slate-500 mt-1 mb-6">
-                Log in or sign up to access verified local services & transparent cooperative rates.
+                Log in or sign up with your Indian mobile number or Google account.
               </p>
 
               {/* Phone Input Form */}
@@ -385,11 +364,11 @@ export default function SignUp({ onNavigate }) {
                 <span>Continue with Google</span>
               </button>
 
-              {/* Demo Helper Pill */}
+              {/* Demo Helper */}
               <div className="mt-6 pt-4 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
                 <span className="flex items-center gap-1">
                   <span className="material-symbols-outlined text-sm text-emerald-600">verified_user</span>
-                  DPDP Act 2023 Compliant
+                  Twilio &amp; Firebase Secured
                 </span>
                 <button
                   type="button"
@@ -513,7 +492,7 @@ export default function SignUp({ onNavigate }) {
               <div className="mt-6 p-3 bg-amber-50/70 border border-amber-200/80 rounded-xl flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <span className="material-symbols-outlined text-amber-700 text-lg">info</span>
-                  <span className="text-xs text-amber-900 font-medium">Demo Testing Code:</span>
+                  <span className="text-xs text-amber-900 font-medium">Demo Fallback Code:</span>
                 </div>
                 <button
                   type="button"
@@ -521,74 +500,6 @@ export default function SignUp({ onNavigate }) {
                   className="text-xs font-mono font-bold bg-amber-200/80 hover:bg-amber-300/80 text-amber-900 px-2.5 py-1 rounded-md transition-colors shadow-2xs"
                 >
                   Auto-Fill 123456
-                </button>
-              </div>
-            </motion.div>
-          )}
-
-          {/* ========================================================================= */}
-          {/* STEP 3: ALREADY AUTHENTICATED SESSION CARD                                */}
-          {/* ========================================================================= */}
-          {step === "session" && (
-            <motion.div
-              key="step-session"
-              initial={{ opacity: 0, scale: 0.96 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.96 }}
-              transition={{ duration: 0.22, ease: "easeInOut" }}
-              className="flex flex-col text-center"
-            >
-              <div className="w-16 h-16 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center mx-auto mb-4 border border-emerald-200 shadow-sm">
-                <span className="material-symbols-outlined text-3xl">check_circle</span>
-              </div>
-
-              <h2 className="text-xl font-bold text-slate-900">
-                You're already signed in
-              </h2>
-              <p className="text-xs text-slate-500 mt-1 mb-6">
-                Active session as{" "}
-                <span className="font-semibold text-slate-800">
-                  {existingUser?.name || existingUser?.phone || "Cooperative Member"}
-                </span>
-              </p>
-
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl text-left space-y-2 mb-6">
-                <div className="flex justify-between text-xs">
-                  <span className="text-slate-500">Account Role:</span>
-                  <span className="font-semibold text-slate-900 uppercase tracking-wide">
-                    {existingUser?.role || "Customer"}
-                  </span>
-                </div>
-                {existingUser?.phone && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Registered Phone:</span>
-                    <span className="font-mono text-slate-900">{existingUser.phone}</span>
-                  </div>
-                )}
-                {existingUser?.email && (
-                  <div className="flex justify-between text-xs">
-                    <span className="text-slate-500">Email:</span>
-                    <span className="font-mono text-slate-900">{existingUser.email}</span>
-                  </div>
-                )}
-              </div>
-
-              <div className="space-y-2.5">
-                <button
-                  type="button"
-                  onClick={() => onNavigate?.("find-help")}
-                  className="w-full bg-[#0A2540] hover:bg-[#081d33] text-white font-medium py-3 px-4 rounded-xl shadow-sm transition-all flex items-center justify-center gap-2 text-sm"
-                >
-                  <span>Go to Find Help / Dashboard</span>
-                  <span className="material-symbols-outlined text-base">arrow_forward</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleLogout}
-                  className="w-full bg-white border border-slate-200 text-rose-600 hover:bg-rose-50 font-medium py-2.5 px-4 rounded-xl transition-all text-sm"
-                >
-                  Switch Account / Log Out
                 </button>
               </div>
             </motion.div>

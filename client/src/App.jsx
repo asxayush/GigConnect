@@ -18,6 +18,7 @@ import RatingView from "./views/RatingView"
 import SahayataFAB from "./components/SahayataFAB"
 import Toast from "./components/Toast/Toast"
 import { showToast } from "./toast"
+import { auth } from "./auth"
 import './App.css'
 
 function App() {
@@ -26,16 +27,64 @@ function App() {
   const [selectedRecord, setSelectedRecord] = useState(null)
   const [language, setLanguage] = useState(localStorage.getItem("gigconnect_language") || "en")
 
+  // State Management (BUG FIX 2): User Authentication State
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user")
+      return saved ? JSON.parse(saved) : null
+    } catch (e) {
+      return null
+    }
+  })
+
   useEffect(() => {
-    const handleUnhandledError = (event) => showToast(event.reason?.message || t("common.error"));
-    window.addEventListener("unhandledrejection", handleUnhandledError);
-    return () => window.removeEventListener("unhandledrejection", handleUnhandledError);
+    const handleUnhandledError = (event) => showToast(event.reason?.message || t("common.error"))
+    window.addEventListener("unhandledrejection", handleUnhandledError)
+    return () => window.removeEventListener("unhandledrejection", handleUnhandledError)
   }, [t])
+
+  // Reactive listener for Login & Logout across windows/components
+  useEffect(() => {
+    const syncAuth = () => {
+      try {
+        const saved = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user")
+        setUser(saved ? JSON.parse(saved) : null)
+      } catch (e) {
+        setUser(null)
+      }
+    }
+    window.addEventListener("gigconnect_auth_change", syncAuth)
+    window.addEventListener("storage", syncAuth)
+    return () => {
+      window.removeEventListener("gigconnect_auth_change", syncAuth)
+      window.removeEventListener("storage", syncAuth)
+    }
+  }, [])
 
   const navigate = (nextView, record = null) => {
     setView(nextView)
     if (record) setSelectedRecord(record)
     window.scrollTo({ top: 0, behavior: "smooth" })
+  }
+
+  // Working Complete Logout Action (BUG FIX 2)
+  const handleLogout = () => {
+    localStorage.removeItem("gig_token")
+    localStorage.removeItem("gigconnect_token")
+    localStorage.removeItem("gigconnect_user")
+    localStorage.removeItem("gig_user")
+    localStorage.removeItem("gigconnect_role")
+    localStorage.removeItem("gigconnect_worker_status")
+    sessionStorage.clear()
+    
+    try {
+      auth?.signOut().catch(() => {})
+    } catch (e) {}
+
+    setUser(null)
+    window.dispatchEvent(new Event("gigconnect_auth_change"))
+    showToast("Logged out successfully.")
+    navigate("home")
   }
 
   const toggleLanguage = () => {
@@ -53,6 +102,8 @@ function App() {
         onNavigate={navigate}
         onToggleLanguage={toggleLanguage}
         currentLanguage={language}
+        user={user}
+        onLogout={handleLogout}
       />
       <main className="flex-1 w-full flex flex-col">
         {view === "home" && <StitchHome onNavigate={navigate} />}
@@ -65,8 +116,8 @@ function App() {
         {view === "admin" && <FederationDesk onNavigate={navigate} />}
         {view === "tool-bank" && <ToolBankMap onNavigate={navigate} />}
         {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}
-        {view === "auth" && <SignUp onNavigate={navigate} />}
-        {view === "public-register" && <SignUp onNavigate={navigate} />}
+        {view === "auth" && <SignUp onNavigate={navigate} setUser={setUser} />}
+        {view === "public-register" && <SignUp onNavigate={navigate} setUser={setUser} />}
       </main>
       
       {/* 24x7 Cooperative Sahayata FAB & AI Triage Chat Modal */}
