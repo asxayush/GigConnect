@@ -24,11 +24,14 @@ export async function apiRequest(path, options = {}) {
     return payload;
 }
 
-export const getWorkers = (skill, coordinates) => {
-    const params = new URLSearchParams({ skill });
+export const getWorkers = (skill, coordinates, sakhiOnly = false) => {
+    const params = new URLSearchParams();
+    if (skill) params.set("skill", skill);
+    if (sakhiOnly) params.set("sakhiOnly", "true");
     if (coordinates) { params.set("lat", coordinates.lat); params.set("lng", coordinates.lng); params.set("radiusKm", "10"); }
     return apiRequest(`/api/workers?${params.toString()}`);
 };
+export const triggerSosAlert = (data, token) => apiRequest("/api/sos", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
 export const register = (data) => apiRequest("/api/auth/register", { method: "POST", body: JSON.stringify(data) });
 export const login = (data) => apiRequest("/api/auth/login", { method: "POST", body: JSON.stringify(data) });
 export const loginWithFirebase = (idToken) => apiRequest("/api/auth/firebase", { method: "POST", headers: { Authorization: `Bearer ${idToken}` } });

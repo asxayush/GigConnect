@@ -7,6 +7,7 @@ import ratingRoutes from "./src/routes/rating.routes.js";
 import adminRoutes from "./src/routes/admin.routes.js";
 import paymentRoutes from "./src/routes/payment.routes.js";
 import workerVerificationRoutes from "./src/routes/workerVerification.routes.js";
+import sosRoutes from "./src/routes/sos.routes.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -69,6 +70,7 @@ app.use("/api/workers", workerRoutes);
 app.use("/api/worker", workerVerificationRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/ratings", ratingRoutes);
+app.use("/api/sos", sosRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 

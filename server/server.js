@@ -17,6 +17,7 @@ import workerVerificationRoutes from "./src/routes/workerVerification.routes.js"
 import adminRoutes from "./src/routes/admin.routes.js";
 import paymentRoutes from "./src/routes/payment.routes.js";
 import ratingRoutes from "./src/routes/rating.routes.js";
+import sosRoutes from "./src/routes/sos.routes.js";
 import chatRoutes from "./routes/chatRoutes.js";
 import toolBankRoutes from "./routes/toolBankRoutes.js";
 import aiRoutes from "./routes/aiRoutes.js";
@@ -72,6 +73,7 @@ app.use("/api/worker", workerVerificationRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
 app.use("/api/ratings", ratingRoutes);
+app.use("/api/sos", sosRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/toolbank", toolBankRoutes);
 app.use("/api/ai", aiRoutes);

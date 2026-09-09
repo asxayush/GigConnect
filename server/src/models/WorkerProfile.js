@@ -7,8 +7,11 @@ const workerProfileSchema = new mongoose.Schema(
         certifications: { type: [String], default: [] },
         photoUrl: { type: String, default: "" },
         verificationStatus: { type: String, enum: ["pending", "verified", "rejected"], default: "pending" },
+        sakhiVerified: { type: Boolean, default: false },
+        isSakhiVerified: { type: Boolean, default: false },
         availability: { type: Boolean, default: true },
         ratingAvg: { type: Number, default: 0 },
+        ratingCount: { type: Number, default: 0 },
         jobsCompleted: { type: Number, default: 0 },
         location: {
             type: { type: String, enum: ["Point"] },

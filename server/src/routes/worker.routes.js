@@ -46,6 +46,12 @@ router.get("/", async (request, response, next) => {
     };
     if (request.query.skill) filter.skills = request.query.skill;
 
+    // Sakhi Mode Enforcement: Filter for women / Sakhi verified cooperative members
+    const isSakhiOnly = request.query.sakhiOnly === "true" || request.query.sakhiMode === "true";
+    if (isSakhiOnly) {
+      filter.$or = [{ sakhiVerified: true }, { isSakhiVerified: true }];
+    }
+
     let profiles;
     if (request.query.lat && request.query.lng) {
       const maxDistance = Number(request.query.radiusKm || 10) * 1000;
@@ -64,11 +70,11 @@ router.get("/", async (request, response, next) => {
           },
         },
       })
-        .populate("userId", "name phone location")
+        .populate("userId", "name phone location gender")
         .sort({ ratingAvg: -1 });
     } else {
       profiles = await WorkerProfile.find(filter)
-        .populate("userId", "name phone location")
+        .populate("userId", "name phone location gender")
         .sort({ ratingAvg: -1 });
     }
     response.json({ success: true, data: profiles, message: "Workers fetched" });

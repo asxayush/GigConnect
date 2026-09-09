@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import i18next from "i18next"
-import { BookingView, DetailView, RatingView, WorkerRegistration } from "./components/Home/Home"
+import { BookingView, DetailView, WorkerRegistration } from "./components/Home/Home"
 import StitchHome from "./components/Home/StitchHome"
 import FindHelp from "./components/FindHelp/FindHelp"
 import MyBookings from "./components/MyBookings/MyBookings"
@@ -13,6 +13,8 @@ import AdminDashboard from "./components/AdminDashboard/AdminDashboard"
 import SignUp from "./components/SignUp/SignUp"
 import Messages from "./components/Messages/Messages"
 import ToolBankMap from "./views/ToolBankMap"
+import ActiveBooking from "./views/ActiveBooking"
+import RatingView from "./views/RatingView"
 import SahayataFAB from "./components/SahayataFAB"
 import Toast from "./components/Toast/Toast"
 import { showToast } from "./toast"
@@ -56,6 +58,7 @@ function App() {
         {view === "home" && <StitchHome onNavigate={navigate} />}
         {view === "find-help" && <FindHelp onNavigate={navigate} />}
         {view === "booking" && <MyBookings selectedWorker={selectedRecord} onNavigate={navigate} />}
+        {view === "active-booking" && <ActiveBooking booking={selectedRecord} onNavigate={navigate} />}
         {view === "messages" && <Messages initialWorker={selectedRecord} onNavigate={navigate} />}
         {view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} />}
         {view === "register" && <RegisterWorker onNavigate={navigate} />}

@@ -507,18 +507,27 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
                         <>
                           <button
                             type="button"
+                            onClick={() => onNavigate("active-booking", b)}
+                            className="px-space-4 py-space-2 rounded-xl font-label-md text-label-md bg-red-600/10 hover:bg-red-600/20 text-red-600 border border-red-500/30 font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-xs"
+                          >
+                            <span className="material-symbols-outlined text-[18px] text-red-600 animate-pulse">near_me</span>
+                            <span>Live Tracking &amp; SOS</span>
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => onNavigate("messages", b.worker)}
-                            className="px-space-4 py-space-2 rounded-full font-label-md text-label-md bg-[#00a884]/15 text-[#008069] hover:bg-[#00a884]/25 font-bold transition-all flex items-center gap-2 border-none cursor-pointer"
+                            className="px-space-4 py-space-2 rounded-xl font-label-md text-label-md bg-[#00a884]/15 text-[#008069] hover:bg-[#00a884]/25 font-bold transition-all flex items-center gap-1.5 border-none cursor-pointer"
                           >
                             <span className="material-symbols-outlined text-[18px]">chat</span>
                             <span>WhatsApp Chat</span>
                           </button>
                           <button
                             type="button"
-                            className="px-space-5 py-space-2 rounded-full font-label-md text-label-md bg-secondary-container text-on-secondary font-bold shadow-[0_4px_14px_rgba(253,101,30,0.25)] hover:opacity-95 active:scale-95 transition-all flex items-center gap- border-none cursor-pointer"
+                            onClick={() => onNavigate("active-booking", b)}
+                            className="px-space-5 py-space-2 rounded-xl font-label-md text-label-md bg-secondary-container text-on-secondary font-bold shadow-[0_4px_14px_rgba(253,101,30,0.25)] hover:opacity-95 active:scale-95 transition-all flex items-center gap-1.5 border-none cursor-pointer"
                           >
-                            <span className="material-symbols-outlined text-[9x]">call</span>
-                            <span>Contact Worker</span>
+                            <span className="material-symbols-outlined text-[18px]">visibility</span>
+                            <span>Track Job</span>
                           </button>
                         </>
                       )}
