@@ -224,20 +224,21 @@ export default function SignUp({ onNavigate, setUser }) {
 
     try {
       const response = await sendPhoneOtp(fullPhone);
-      if (response?.data?.demoOtp) {
-        setGeneratedDemoCode(String(response.data.demoOtp));
-      } else {
-        setGeneratedDemoCode("123456");
-      }
+      const code = response?.data?.demoOtp || "123456";
+      setGeneratedDemoCode(String(code));
       setCountdown(30);
       setStep("otp");
-      showToast(`Verification code sent to ${fullPhone}`);
+      showToast(
+        response?.data?.isDeliveredViaTwilio
+          ? `SMS verification code dispatched to ${fullPhone}`
+          : `Verification code: ${code} (Enter on screen)`
+      );
     } catch (err) {
       console.warn("SMS Gateway note (using fallback mock):", err.message);
       setGeneratedDemoCode("123456");
       setCountdown(30);
       setStep("otp");
-      showToast(`Demo OTP code: 123456 for ${fullPhone}`);
+      showToast(`Verification code: 123456 (Enter on screen)`);
     } finally {
       setIsLoading(false);
     }
@@ -749,14 +750,36 @@ export default function SignUp({ onNavigate, setUser }) {
                 <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
                   Enter 6-Digit OTP
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 mt-1 mb-5">
-                  Code sent to <strong className="text-slate-900">+91 {phone}</strong>
-                  {" • "}
-                  <span className="text-emerald-700 font-bold">Demo OTP: {generatedDemoCode}</span>
+                <p className="text-xs sm:text-sm text-slate-500 mt-1 mb-3">
+                  Verification for <strong className="text-slate-900">+91 {phone}</strong>
                 </p>
 
-                <form onSubmit={handleVerifyOtp} className="space-y-5">
-                  <div className="flex items-center justify-between gap-2">
+                {/* Prominent OTP Display & 1-Click Auto-fill */}
+                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                  <div className="min-w-0">
+                    <span className="text-xs font-bold text-emerald-950 block">
+                      Active OTP: <span className="font-mono text-emerald-700 font-extrabold text-sm tracking-wider">{generatedDemoCode}</span>
+                    </span>
+                    <span className="text-[10px] text-emerald-700 block truncate">
+                      Universal bypass <code className="font-mono">123456</code> is also active
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const chars = (generatedDemoCode || "123456").split("");
+                      while (chars.length < 6) chars.push("0");
+                      setOtpValues(chars.slice(0, 6));
+                    }}
+                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-extrabold border-none cursor-pointer flex-shrink-0 flex items-center gap-1 shadow-2xs"
+                  >
+                    <span className="material-symbols-outlined text-sm">bolt</span>
+                    <span>Auto-fill</span>
+                  </button>
+                </div>
+
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="flex items-center justify-between gap-1.5 sm:gap-2">
                     {otpValues.map((val, idx) => (
                       <input
                         key={idx}
@@ -767,7 +790,7 @@ export default function SignUp({ onNavigate, setUser }) {
                         onChange={(e) => handleOtpBoxChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                         onPaste={idx === 0 ? handleOtpPaste : undefined}
-                        className="w-11 h-13 sm:w-12 sm:h-14 text-center text-xl font-extrabold text-slate-900 border border-slate-300 rounded-xl focus:border-[#0A2540] focus:ring-2 focus:ring-[#0A2540]/20 outline-none transition-all shadow-2xs"
+                        className="w-10 h-12 sm:w-12 sm:h-14 text-center text-lg sm:text-xl font-extrabold text-slate-900 border border-slate-300 rounded-xl focus:border-[#0A2540] focus:ring-2 focus:ring-[#0A2540]/20 outline-none transition-all shadow-2xs"
                       />
                     ))}
                   </div>
@@ -792,7 +815,7 @@ export default function SignUp({ onNavigate, setUser }) {
                       onClick={() => setOtpValues(["1", "2", "3", "4", "5", "6"])}
                       className="text-indigo-600 font-bold hover:underline border-none bg-transparent cursor-pointer"
                     >
-                      ⚡ Auto-fill {generatedDemoCode}
+                      ⚡ Fill 123456
                     </button>
 
                     {countdown > 0 ? (
