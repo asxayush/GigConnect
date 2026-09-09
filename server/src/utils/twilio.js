@@ -32,15 +32,33 @@ export const sendPhoneVerification = async (phone) => {
     let isDeliveredViaTwilio = false;
 
     if (client) {
-        try {
-            const verification = await client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID).verifications.create({ to: formattedPhone, channel: "sms" });
-            if (verification.status === "pending" || verification.status === "approved") {
-                isDeliveredViaTwilio = true;
+        // Attempt 1: Twilio Verify Service
+        if (process.env.TWILIO_VERIFY_SERVICE_SID && /^VA[a-f0-9]{32}$/i.test(process.env.TWILIO_VERIFY_SERVICE_SID)) {
+            try {
+                const verification = await client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID).verifications.create({ to: formattedPhone, channel: "sms" });
+                if (verification.status === "pending" || verification.status === "approved") {
+                    return { status: "pending", demoCode: generatedOtp, isDeliveredViaTwilio: true };
+                }
+            } catch (verifyErr) {
+                console.warn(`[Twilio Verify Notice] ${verifyErr.message}`);
             }
-            return { status: verification.status || "pending", demoCode: generatedOtp, isDeliveredViaTwilio: true };
-        } catch (error) {
-            console.warn(`[Twilio Note] SMS not dispatched to ${formattedPhone} (Trial account only delivers to verified numbers): ${error.message}`);
-            return { status: "pending", demoCode: generatedOtp, isDeliveredViaTwilio: false, reason: error.message };
+        }
+
+        // Attempt 2: Twilio Programmable SMS (using TWILIO_FROM_NUMBER)
+        if (process.env.TWILIO_FROM_NUMBER) {
+            try {
+                const message = await client.messages.create({
+                    body: `Your GigConnect security verification code is: ${generatedOtp}. Valid for 10 minutes.`,
+                    from: process.env.TWILIO_FROM_NUMBER,
+                    to: formattedPhone,
+                });
+                if (message.sid) {
+                    console.log(`✓ Real SMS sent via Twilio to ${formattedPhone} (SID: ${message.sid})`);
+                    return { status: "pending", demoCode: generatedOtp, isDeliveredViaTwilio: true };
+                }
+            } catch (smsErr) {
+                console.warn(`[Twilio SMS Notice] Could not deliver to ${formattedPhone}: ${smsErr.message}`);
+            }
         }
     }
 

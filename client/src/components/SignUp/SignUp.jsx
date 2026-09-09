@@ -88,6 +88,7 @@ export default function SignUp({ onNavigate, setUser }) {
   const [countdown, setCountdown] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
   const [generatedDemoCode, setGeneratedDemoCode] = useState("123456");
+  const [isRealSmsDelivered, setIsRealSmsDelivered] = useState(false);
   const [showQuickLogin, setShowQuickLogin] = useState(true);
 
   const otpInputsRef = useRef([]);
@@ -225,20 +226,23 @@ export default function SignUp({ onNavigate, setUser }) {
     try {
       const response = await sendPhoneOtp(fullPhone);
       const code = response?.data?.demoOtp || "123456";
+      const delivered = Boolean(response?.data?.isDeliveredViaTwilio);
       setGeneratedDemoCode(String(code));
+      setIsRealSmsDelivered(delivered);
       setCountdown(30);
       setStep("otp");
       showToast(
-        response?.data?.isDeliveredViaTwilio
-          ? `SMS verification code dispatched to ${fullPhone}`
-          : `Verification code: ${code} (Enter on screen)`
+        delivered
+          ? `SMS verification code sent to ${fullPhone}`
+          : `Twilio Trial Mode: Verification code generated`
       );
     } catch (err) {
       console.warn("SMS Gateway note (using fallback mock):", err.message);
       setGeneratedDemoCode("123456");
+      setIsRealSmsDelivered(false);
       setCountdown(30);
       setStep("otp");
-      showToast(`Verification code: 123456 (Enter on screen)`);
+      showToast(`Sandbox code: 123456`);
     } finally {
       setIsLoading(false);
     }
@@ -754,29 +758,45 @@ export default function SignUp({ onNavigate, setUser }) {
                   Verification for <strong className="text-slate-900">+91 {phone}</strong>
                 </p>
 
-                {/* Prominent OTP Display & 1-Click Auto-fill */}
-                <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
-                  <div className="min-w-0">
-                    <span className="text-xs font-bold text-emerald-950 block">
-                      Active OTP: <span className="font-mono text-emerald-700 font-extrabold text-sm tracking-wider">{generatedDemoCode}</span>
+                {/* Conditional Banner: Real SMS Dispatched vs Twilio Trial Fallback */}
+                {isRealSmsDelivered ? (
+                  <div className="mb-4 p-3 bg-blue-50 border border-blue-200/90 rounded-xl flex items-center gap-2.5 shadow-2xs">
+                    <span className="material-symbols-outlined text-blue-600 text-xl flex-shrink-0">
+                      sms
                     </span>
-                    <span className="text-[10px] text-emerald-700 block truncate">
-                      Universal bypass <code className="font-mono">123456</code> is also active
-                    </span>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-xs font-bold text-blue-950 block">
+                        Real SMS Dispatched via Twilio
+                      </span>
+                      <span className="text-[11px] text-blue-700 block truncate">
+                        Please check your cellular SMS messages on +91 {phone}.
+                      </span>
+                    </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const chars = (generatedDemoCode || "123456").split("");
-                      while (chars.length < 6) chars.push("0");
-                      setOtpValues(chars.slice(0, 6));
-                    }}
-                    className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-extrabold border-none cursor-pointer flex-shrink-0 flex items-center gap-1 shadow-2xs"
-                  >
-                    <span className="material-symbols-outlined text-sm">bolt</span>
-                    <span>Auto-fill</span>
-                  </button>
-                </div>
+                ) : (
+                  <div className="mb-4 p-3 bg-emerald-50 border border-emerald-200/90 rounded-xl flex items-center justify-between gap-2 shadow-2xs">
+                    <div className="min-w-0">
+                      <span className="text-xs font-bold text-emerald-950 block">
+                        Twilio Trial Mode: <span className="font-mono text-emerald-700 font-extrabold text-sm tracking-wider">{generatedDemoCode}</span>
+                      </span>
+                      <span className="text-[10px] text-emerald-700 block truncate">
+                        Unverified trial number. Click auto-fill or use <code className="font-mono">123456</code>.
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const chars = (generatedDemoCode || "123456").split("");
+                        while (chars.length < 6) chars.push("0");
+                        setOtpValues(chars.slice(0, 6));
+                      }}
+                      className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-lg text-xs font-extrabold border-none cursor-pointer flex-shrink-0 flex items-center gap-1 shadow-2xs"
+                    >
+                      <span className="material-symbols-outlined text-sm">bolt</span>
+                      <span>Auto-fill</span>
+                    </button>
+                  </div>
+                )}
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <div className="flex items-center justify-between gap-1.5 sm:gap-2">
