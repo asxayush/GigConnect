@@ -168,4 +168,85 @@ router.patch("/:id/status", requireAuth, async (request, response, next) => {
   }
 });
 
+// PATCH /api/bookings/:id/verify-otp — authenticate 4-digit PIN to start job
+router.patch("/:id/verify-otp", async (request, response, next) => {
+  try {
+    const { otp } = request.body;
+    const booking = await Booking.findById(request.params.id);
+    if (!booking) {
+      return response.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    if (booking.status === "In Progress" || booking.status === "Completed") {
+      return response.json({ success: true, message: `Booking is already ${booking.status}`, data: booking });
+    }
+
+    if ((booking.otpAttempts || 0) >= 5) {
+      return response.status(429).json({ success: false, message: "Too many failed OTP attempts. Security lock engaged." });
+    }
+
+    if (!otp || String(booking.otp).trim() !== String(otp).trim()) {
+      booking.otpAttempts = (booking.otpAttempts || 0) + 1;
+      await booking.save();
+      const remaining = 5 - booking.otpAttempts;
+      return response.status(400).json({ success: false, message: `Invalid 4-digit OTP. ${remaining} attempt(s) remaining.` });
+    }
+
+    booking.status = "In Progress";
+    booking.startedAt = new Date();
+    booking.otpAttempts = 0;
+    await booking.save();
+
+    if (booking.workerId) {
+      await WorkerProfile.findOneAndUpdate(
+        { $or: [{ userId: booking.workerId }, { _id: booking.workerId }] },
+        { availability: false }
+      );
+    }
+
+    const populated = await booking.populate("customerId workerId", "name phone");
+    response.json({ success: true, message: "Doorstep OTP verified! Service is now In Progress.", data: populated });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/bookings/:id/complete — mark job completed & settle 95/5/0 escrow
+router.patch("/:id/complete", async (request, response, next) => {
+  try {
+    const booking = await Booking.findById(request.params.id);
+    if (!booking) {
+      return response.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    booking.status = "Completed";
+    booking.paymentStatus = "escrow_settled";
+    booking.completedAt = new Date();
+    booking.settledAt = new Date();
+    await booking.save();
+
+    if (booking.workerId) {
+      await WorkerProfile.findOneAndUpdate(
+        { $or: [{ userId: booking.workerId }, { _id: booking.workerId }] },
+        {
+          availability: true,
+          $inc: {
+            jobsCompleted: 1,
+            welfareFundBalance: booking.distribution?.mutualWelfare || Math.round(Number(booking.price || 0) * 0.05),
+          },
+        }
+      );
+    }
+
+    const populated = await booking.populate("customerId workerId", "name phone");
+    response.json({
+      success: true,
+      message: "Service completed and 95% worker payout settled with 5% welfare fund allocation.",
+      data: populated,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
 export default router;

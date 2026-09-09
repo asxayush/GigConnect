@@ -357,37 +357,37 @@ export default function WorkerRadarMap({
               <div
                 key={worker.id}
                 onClick={() => onSelectWorker(worker)}
-                className={`flex-shrink-0 w-[230px] sm:w-[250px] p-3 rounded-2xl transition-all cursor-pointer snap-start border ${
+                className={`flex-shrink-0 w-[260px] sm:w-[280px] p-3 rounded-2xl transition-all cursor-pointer snap-start border ${
                   isSelected
                     ? "bg-surface-container-lowest text-on-surface shadow-xl ring-2 ring-secondary-container border-transparent scale-[1.02]"
                     : "bg-surface-container-lowest/95 text-on-surface hover:bg-surface-container-lowest border-surface-container-high shadow-md hover:scale-[1.01]"
                 }`}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-2.5">
-                    <img
-                      src={worker.image}
-                      alt={worker.name}
-                      className="w-9 h-9 rounded-full object-cover ring-1 ring-border-tone/40"
-                    />
-                    <div className="leading-tight">
-                      <h4 className="text-xs font-bold text-primary truncate max-w-[110px]">
+                <div className="flex items-center gap-2.5 mb-2">
+                  <img
+                    src={worker.image}
+                    alt={worker.name}
+                    className="w-10 h-10 rounded-xl object-cover ring-1 ring-border-tone/40 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-1">
+                      <h4 className="text-xs font-bold text-primary truncate m-0">
                         {worker.name}
                       </h4>
-                      <p className="text-[10px] text-on-surface-variant truncate max-w-[110px]">
-                        {worker.role}
-                      </p>
+                      <span className="px-1.5 py-0.5 bg-primary text-on-primary text-[10px] font-bold rounded-md shrink-0">
+                        {worker.mapRate || worker.rate || "₹500"}
+                      </span>
                     </div>
+                    <p className="text-[10px] text-on-surface-variant truncate m-0 mt-0.5">
+                      {worker.role}
+                    </p>
                   </div>
-                  <span className="px-2 py-0.5 bg-primary text-on-primary text-[10px] font-bold rounded-full">
-                    {worker.mapRate || worker.rate || "₹500"}
-                  </span>
                 </div>
 
                 {/* Subtitle & Area in Delhi NCR */}
                 <div className="text-[10px] text-on-surface-variant font-medium mb-2 truncate flex items-center gap-1">
                   <span className="material-symbols-outlined text-[12px] text-secondary">place</span>
-                  <span>{worker.area || worker.city}</span>
+                  <span className="truncate">{worker.area || worker.city}</span>
                 </div>
 
                 {/* Status Badges */}

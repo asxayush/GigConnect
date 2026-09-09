@@ -4,6 +4,7 @@ import "leaflet/dist/leaflet.css";
 import L from "leaflet";
 import { motion, AnimatePresence } from "framer-motion";
 import { showToast } from "../toast";
+import { getToolInventory, rentToolItem, returnToolItem, getMyToolRentals } from "../api";
 
 const BACKEND_URL = (import.meta.env.VITE_API_URL || "http://localhost:4000").replace(/\/$/, "");
 
@@ -89,12 +90,15 @@ const HUBS_DATA = [
 const INITIAL_TOOLS = [
   {
     id: "tool-101",
+    toolId: "tool-101",
     name: "Bosch Professional GBH 2-26 DRE Rotary Hammer Drill",
     category: "Electrical & Heavy Drilling",
     brand: "Bosch Power Tools",
     specs: "800W motor, 2.7 Joules impact energy, SDS-plus chuck",
     replacementValue: 15499,
     coopDailyFee: 0,
+    totalStock: 3,
+    availableStock: 3,
     status: "available",
     condition: "Certified Master Grade",
     hubName: "Okhla Phase 3 Hub",
@@ -105,12 +109,15 @@ const INITIAL_TOOLS = [
   },
   {
     id: "tool-102",
+    toolId: "tool-102",
     name: "DeWalt DWE560 Heavy-Duty Circular Saw 184mm",
     category: "Carpentry & Woodcraft",
     brand: "DeWalt Industrial Tools",
     specs: "1350W high-torque motor, 65mm cutting depth",
     replacementValue: 12850,
     coopDailyFee: 0,
+    totalStock: 2,
+    availableStock: 2,
     status: "available",
     condition: "Precision Calibrated",
     hubName: "Gurugram Depot",
@@ -121,12 +128,15 @@ const INITIAL_TOOLS = [
   },
   {
     id: "tool-103",
+    toolId: "tool-103",
     name: "Stanley Heavy Inverter Arc Welder 200A",
     category: "Metalwork & Fabrication",
     brand: "Stanley FatMax",
     specs: "IGBT inverter technology, anti-stick hot start",
     replacementValue: 18900,
     coopDailyFee: 0,
+    totalStock: 2,
+    availableStock: 2,
     status: "available",
     condition: "Factory Certified",
     hubName: "Noida Sector 62",
@@ -137,12 +147,15 @@ const INITIAL_TOOLS = [
   },
   {
     id: "tool-104",
+    toolId: "tool-104",
     name: "Fluke 117 Electrician's True RMS Digital Multimeter",
     category: "Electrical Diagnostic",
     brand: "Fluke Calibration",
     specs: "VoltAlert non-contact AC voltage detection, LoZ impedance",
     replacementValue: 22400,
     coopDailyFee: 0,
+    totalStock: 4,
+    availableStock: 4,
     status: "available",
     condition: "NABL Lab Tested",
     hubName: "CP Central Depot",
@@ -153,12 +166,15 @@ const INITIAL_TOOLS = [
   },
   {
     id: "tool-105",
-    name: "RIDGID Heavy Duty Pipe Threader & Die Kit (1/2\" to 2\")",
+    toolId: "tool-105",
+    name: 'RIDGID Heavy Duty Pipe Threader & Die Kit (1/2" to 2")',
     category: "Plumbing & Sanitary",
     brand: "RIDGID Professional",
     specs: "Drop head ratchet threader with alloy dies",
     replacementValue: 16500,
     coopDailyFee: 0,
+    totalStock: 2,
+    availableStock: 2,
     status: "available",
     condition: "Inspected & Lubricated",
     hubName: "Okhla Phase 3 Hub",
@@ -173,6 +189,8 @@ export default function ToolBankMap({ onNavigate }) {
   const [tools, setTools] = useState(INITIAL_TOOLS);
   const [selectedHub, setSelectedHub] = useState("all");
   const [reservationSuccess, setReservationSuccess] = useState(null);
+  const [activeRentals, setActiveRentals] = useState([]);
+  const [isProcessing, setIsProcessing] = useState(false);
 
   // ================= 1. USER & VERIFICATION STATE =================
   const [verificationStatus, setVerificationStatus] = useState(() => {
@@ -185,25 +203,38 @@ export default function ToolBankMap({ onNavigate }) {
         if (u.verificationStatus) return u.verificationStatus;
       } catch (e) {}
     }
-    return "pending"; // Default demo state: pending
+    return "verified"; // Default demo state
   });
 
   const isVerified = verificationStatus === "verified";
 
-  useEffect(() => {
-    localStorage.setItem("gigconnect_worker_status", verificationStatus);
-  }, [verificationStatus]);
-
-  // Fetch from backend if server is running
-  useEffect(() => {
-    fetch(`${BACKEND_URL}/api/toolbank`)
-      .then((res) => res.json())
+  const refreshInventoryAndRentals = () => {
+    const token = localStorage.getItem("gigconnect_token");
+    getToolInventory()
       .then((res) => {
         if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
           setTools(res.data);
         }
       })
       .catch(() => {});
+
+    if (token) {
+      getMyToolRentals(token)
+        .then((res) => {
+          if (res?.success && Array.isArray(res.data)) {
+            setActiveRentals(res.data.filter((r) => r.status === "active"));
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    localStorage.setItem("gigconnect_worker_status", verificationStatus);
+  }, [verificationStatus]);
+
+  useEffect(() => {
+    refreshInventoryAndRentals();
   }, []);
 
   const filteredTools = tools.filter((t) => {
@@ -218,29 +249,30 @@ export default function ToolBankMap({ onNavigate }) {
   const handleReserve = async (tool) => {
     if (!isVerified) {
       showToast(
-        "Your profile is pending Federation approval. You can reserve tools once you receive your Verified Badge."
+        "Aadhaar e-KYC verification required. You can reserve tools once verified by the Cooperative Federation."
       );
       return;
     }
 
+    if (tool.availableStock <= 0) {
+      showToast(`This tool is currently out of stock at ${tool.hubName}.`);
+      return;
+    }
+
+    setIsProcessing(true);
     try {
       const token = localStorage.getItem("gigconnect_token") || "demo-verified-worker-token";
-      const res = await fetch(`${BACKEND_URL}/api/toolbank/${tool.id}/reserve`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-      });
+      const res = await rentToolItem(tool.toolId || tool.id, token);
 
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setReservationSuccess(data.data);
-        showToast(`✓ ${tool.name} reserved for 24 hours!`);
+      if (res?.success) {
+        setReservationSuccess(res.data);
+        showToast(`✓ ${tool.name} checked out with zero cash deposit!`);
+        refreshInventoryAndRentals();
       } else {
-        showToast(data.message || "Reservation failed.");
+        showToast(res?.message || "Tool reservation failed.");
       }
     } catch (e) {
+      // Fallback display if offline
       setReservationSuccess({
         reservationId: `TB-RES-${Date.now().toString().slice(-6)}`,
         toolName: tool.name,
@@ -250,12 +282,29 @@ export default function ToolBankMap({ onNavigate }) {
         validUntil: new Date(Date.now() + 24 * 3600 * 1000),
       });
       showToast(`✓ ${tool.name} reserved under Cooperative Mutual Trust!`);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleReturn = async (rentalId) => {
+    setIsProcessing(true);
+    try {
+      const token = localStorage.getItem("gigconnect_token") || "demo-verified-worker-token";
+      const res = await returnToolItem(rentalId, token);
+      if (res?.success) {
+        showToast("✓ Equipment successfully returned to Hub. Stock restored.");
+        refreshInventoryAndRentals();
+      }
+    } catch (err) {
+      showToast(err.message || "Failed to return tool");
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return (
     <div className="w-full bg-[#faf8ff] text-[#0A2540] min-h-screen font-sans antialiased">
-      
       {/* ================= 1. PAGE HEADER ================= */}
       <div className="bg-white border-b border-slate-200/80 sticky top-0 z-30 shadow-xs">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -266,15 +315,15 @@ export default function ToolBankMap({ onNavigate }) {
                 Sahakari Tool Bank
               </h1>
               <span className="px-2.5 py-0.5 bg-orange-50 text-[#ea580c] border border-orange-200 rounded-full text-[11px] font-extrabold uppercase">
-                0% Deposit
+                0% Cash Deposit
               </span>
             </div>
             <p className="text-xs sm:text-sm text-slate-500 m-0 mt-0.5 font-medium">
-              Reserve heavy cooperative equipment across Delhi NCR. 0% Deposit for verified members.
+              Reserve heavy cooperative equipment across Delhi NCR. Mutual cooperative trust for verified karigars.
             </p>
           </div>
 
-          {/* Clean Segmented Control for Simulate Verification */}
+          {/* Segmented Control for Simulate Verification */}
           <div className="flex items-center gap-2 self-start md:self-auto bg-slate-100/90 p-1 rounded-xl border border-slate-200">
             <span className="text-[11px] font-bold text-slate-500 px-2 hidden sm:inline">
               Simulate Verification:
@@ -317,13 +366,40 @@ export default function ToolBankMap({ onNavigate }) {
         </div>
       </div>
 
+      {/* Active Unreturned Rental Notification Banner */}
+      {activeRentals.length > 0 && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4">
+          <div className="p-4 bg-blue-50 border border-blue-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-blue-600 text-white flex items-center justify-center font-bold">
+                <span className="material-symbols-outlined text-[20px]">handyman</span>
+              </div>
+              <div>
+                <span className="text-xs font-bold text-blue-900 uppercase tracking-wider block">
+                  Active Tool Checkout: {activeRentals[0].rentalCode}
+                </span>
+                <p className="text-xs text-blue-800 m-0">
+                  {activeRentals[0].toolId} checked out from {activeRentals[0].pickupHub}. Policy limit: 1 active equipment per worker.
+                </p>
+              </div>
+            </div>
+            <button
+              type="button"
+              disabled={isProcessing}
+              onClick={() => handleReturn(activeRentals[0]._id)}
+              className="px-4 py-2 bg-blue-700 hover:bg-blue-800 text-white text-xs font-bold rounded-xl border-none cursor-pointer transition-all shadow-xs shrink-0"
+            >
+              Return Tool to Depot
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* ================= 2. TWO-COLUMN MAIN LAYOUT ================= */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          
           {/* ================= 3. LEFT COLUMN: REAL-TIME DELHI NCR LEAFLET MAP ================= */}
           <div className="lg:col-span-6 flex flex-col gap-3">
-            
             {/* Hub Quick Filter Badges */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
               <button
@@ -356,19 +432,17 @@ export default function ToolBankMap({ onNavigate }) {
             {/* Leaflet Map Wrapper */}
             <div className="h-[600px] w-full rounded-2xl overflow-hidden border border-slate-200 shadow-sm relative z-0 bg-slate-100">
               <MapContainer
-                center={[28.6139, 77.2090]}
+                center={[28.6139, 77.209]}
                 zoom={10}
                 scrollWheelZoom={true}
                 className="h-full w-full"
                 style={{ height: "100%", width: "100%" }}
               >
-                {/* Light Theme CartoDB Positron TileLayer */}
                 <TileLayer
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
                   url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
                 />
 
-                {/* Delhi NCR Hub Markers */}
                 {HUBS_DATA.map((hub) => (
                   <Marker
                     key={hub.id}
@@ -418,9 +492,8 @@ export default function ToolBankMap({ onNavigate }) {
             </div>
           </div>
 
-          {/* ================= 4. RIGHT COLUMN: TOOL LISTINGS (LIGHT THEME) ================= */}
+          {/* ================= 4. RIGHT COLUMN: TOOL LISTINGS ================= */}
           <div className="lg:col-span-6 flex flex-col">
-            
             {/* Amber Warning Banner for Pending/Unverified */}
             {!isVerified && (
               <motion.div
@@ -433,10 +506,10 @@ export default function ToolBankMap({ onNavigate }) {
                 </div>
                 <div className="flex-1">
                   <h4 className="text-xs font-black text-amber-900 uppercase tracking-wider m-0">
-                    Verification Required to Reserve Heavy Equipment
+                    Aadhaar Verification Required to Reserve Tools
                   </h4>
                   <p className="text-xs text-amber-800 m-0 mt-0.5 leading-relaxed">
-                    Heavy tools (up to <strong>₹22,400 replacement value</strong>) are safeguarded under cooperative mutual trust. Complete your Aadhaar e-KYC to unlock instant zero-deposit tool pickup.
+                    Heavy equipment (up to <strong>₹22,400 replacement value</strong>) is unlocked under cooperative mutual trust. Complete Aadhaar e-KYC to reserve without cash deposits.
                   </p>
                   <button
                     type="button"
@@ -457,7 +530,7 @@ export default function ToolBankMap({ onNavigate }) {
                   Available Equipment ({filteredTools.length})
                 </h3>
                 <span className="text-xs text-slate-500">
-                  Inspected weekly by Federation Maintenance Guilds
+                  Real stock tracked in MongoDB with server-side Aadhaar gating
                 </span>
               </div>
               <span className="text-xs font-bold text-slate-400 bg-slate-100 px-2.5 py-1 rounded-lg">
@@ -467,76 +540,83 @@ export default function ToolBankMap({ onNavigate }) {
 
             {/* Vertically Scrollable List of Tool Cards */}
             <div className="space-y-3.5 max-h-[600px] overflow-y-auto pr-1">
-              {filteredTools.map((tool) => (
-                <div
-                  key={tool.id}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/80 hover:border-slate-300 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm transition-all"
-                >
-                  <img
-                    src={tool.imageUrl}
-                    alt={tool.name}
-                    className="w-20 h-20 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50"
-                  />
+              {filteredTools.map((tool) => {
+                const inStock = (tool.availableStock ?? 1) > 0;
+                return (
+                  <div
+                    key={tool.id || tool.toolId}
+                    className="bg-white p-4 rounded-2xl border border-slate-200/80 hover:border-slate-300 flex flex-col sm:flex-row items-start sm:items-center gap-4 shadow-sm transition-all"
+                  >
+                    <img
+                      src={tool.imageUrl}
+                      alt={tool.name}
+                      className="w-20 h-20 rounded-xl object-cover border border-slate-100 flex-shrink-0 bg-slate-50"
+                    />
 
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="px-2 py-0.2 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-md uppercase">
-                        {tool.brand}
-                      </span>
-                      <span className="text-[11px] text-emerald-700 font-extrabold flex items-center gap-0.5">
-                        <span className="material-symbols-outlined text-[13px]">verified</span>
-                        {tool.condition}
-                      </span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+                        <span className="px-2 py-0.2 bg-slate-100 text-slate-700 text-[10px] font-bold rounded-md uppercase">
+                          {tool.brand}
+                        </span>
+                        <span className={`text-[11px] font-extrabold flex items-center gap-0.5 ${inStock ? "text-emerald-700" : "text-red-600"}`}>
+                          <span className="material-symbols-outlined text-[13px]">{inStock ? "check_circle" : "cancel"}</span>
+                          {inStock ? `${tool.availableStock ?? 1} Available in Hub` : "Out of Stock"}
+                        </span>
+                      </div>
+
+                      <h4 className="text-sm font-black text-[#0A2540] truncate m-0">
+                        {tool.name}
+                      </h4>
+                      <p className="text-xs text-slate-500 m-0 mt-0.5 line-clamp-1">
+                        {tool.specs}
+                      </p>
+
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs">
+                        <span className="text-[#ea580c] font-black">
+                          Value: ₹{Number(tool.replacementValue || 15000).toLocaleString()}
+                        </span>
+                        <span className="text-slate-300">•</span>
+                        <span className="text-slate-600 font-semibold flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[13px] text-slate-400">location_on</span>
+                          {tool.hubName}
+                        </span>
+                      </div>
                     </div>
 
-                    <h4 className="text-sm font-black text-[#0A2540] truncate m-0">
-                      {tool.name}
-                    </h4>
-                    <p className="text-xs text-slate-500 m-0 mt-0.5 line-clamp-1">
-                      {tool.specs}
-                    </p>
-
-                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2 text-xs">
-                      <span className="text-[#ea580c] font-black">
-                        Value: ₹{tool.replacementValue.toLocaleString()}
-                      </span>
-                      <span className="text-slate-300">•</span>
-                      <span className="text-slate-600 font-semibold flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[13px] text-slate-400">location_on</span>
-                        {tool.hubName}
-                      </span>
+                    {/* Action Button */}
+                    <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
+                      {isVerified ? (
+                        <button
+                          type="button"
+                          disabled={!inStock || isProcessing}
+                          onClick={() => handleReserve(tool)}
+                          className={`w-full sm:w-auto px-4 py-2.5 font-extrabold text-xs rounded-xl shadow-sm transition-all border-none flex items-center justify-center gap-1.5 ${
+                            inStock
+                              ? "bg-[#ea580c] hover:bg-[#c2410c] text-white cursor-pointer active:scale-95"
+                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                          }`}
+                        >
+                          <span className="material-symbols-outlined text-[16px]">
+                            {inStock ? "check_circle" : "block"}
+                          </span>
+                          <span>{inStock ? "Reserve Tool (0% Deposit)" : "Out of Stock"}</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleReserve(tool)}
+                          className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-400 border border-slate-200 rounded-xl font-bold text-xs cursor-not-allowed flex items-center justify-center gap-1.5 hover:bg-slate-200/60 transition-colors"
+                        >
+                          <span className="material-symbols-outlined text-[15px] text-amber-500">lock</span>
+                          <span>🔒 Requires Aadhaar</span>
+                        </button>
+                      )}
                     </div>
                   </div>
-
-                  {/* Action Button: Verified vs Pending */}
-                  <div className="w-full sm:w-auto flex-shrink-0 pt-2 sm:pt-0">
-                    {isVerified ? (
-                      <button
-                        type="button"
-                        onClick={() => handleReserve(tool)}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-[#ea580c] hover:bg-[#c2410c] text-white font-extrabold text-xs rounded-xl shadow-sm transition-all border-none cursor-pointer flex items-center justify-center gap-1.5 active:scale-95"
-                      >
-                        <span className="material-symbols-outlined text-[16px]">check_circle</span>
-                        <span>Reserve Tool</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => handleReserve(tool)}
-                        className="w-full sm:w-auto px-4 py-2.5 bg-slate-100 text-slate-400 border border-slate-200 rounded-xl font-bold text-xs cursor-not-allowed flex items-center justify-center gap-1.5 hover:bg-slate-200/60 transition-colors"
-                        title="Your profile is pending Federation approval. You can reserve tools once you receive your Verified Badge."
-                      >
-                        <span className="material-symbols-outlined text-[15px] text-amber-500">lock</span>
-                        <span>🔒 Requires Verification</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
-
           </div>
-
         </div>
       </div>
 
@@ -586,7 +666,6 @@ export default function ToolBankMap({ onNavigate }) {
           </div>
         )}
       </AnimatePresence>
-
     </div>
   );
 }

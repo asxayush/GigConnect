@@ -270,3 +270,130 @@ export const updateBookingStatus = asyncHandler(async (req, res) => {
     data: populated,
   });
 });
+
+/**
+ * @desc Verify 4-digit doorstep handshake OTP & move status to In Progress
+ * @route PATCH /api/bookings/:id/verify-otp
+ * @access Private (Worker / Customer / Admin)
+ */
+export const verifyOtpAndStart = asyncHandler(async (req, res) => {
+  const { otp } = req.body;
+  const booking = await Booking.findById(req.params.id);
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found.");
+  }
+
+  if (booking.status === "In Progress" || booking.status === "Completed") {
+    return res.status(200).json({
+      success: true,
+      message: `Booking is already ${booking.status}.`,
+      data: booking,
+    });
+  }
+
+  // Max retry attempts check (5 attempts)
+  if ((booking.otpAttempts || 0) >= 5) {
+    throw new ApiError(429, "Too many failed OTP attempts. Security lock engaged. Please contact Federation Desk.");
+  }
+
+  if (!otp || String(booking.otp).trim() !== String(otp).trim()) {
+    booking.otpAttempts = (booking.otpAttempts || 0) + 1;
+    await booking.save();
+    const remaining = 5 - booking.otpAttempts;
+    throw new ApiError(400, `Invalid 4-digit OTP PIN. ${remaining} attempt(s) remaining before security lockout.`);
+  }
+
+  // Success: reset attempts, mark In Progress
+  booking.status = "In Progress";
+  booking.startedAt = new Date();
+  booking.otpAttempts = 0;
+  await booking.save();
+
+  // Mark worker busy so they aren't matched for new jobs concurrently
+  if (booking.workerId) {
+    await WorkerProfile.findOneAndUpdate(
+      { $or: [{ userId: booking.workerId }, { _id: booking.workerId }] },
+      { availability: false }
+    );
+  }
+
+  const populated = await booking.populate("customerId workerId", "name phone");
+
+  try {
+    const io = getIO();
+    if (io) {
+      io.to(`booking_${booking._id}`).emit("booking_started", {
+        bookingId: booking._id,
+        status: "In Progress",
+        startedAt: booking.startedAt,
+      });
+      io.to(`user_${booking.customerId?._id || booking.customerId}`).emit("bookingStatusChanged", {
+        bookingId: booking._id,
+        status: "In Progress",
+      });
+    }
+  } catch (ioErr) {
+    // Non-fatal socket emission
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Doorstep OTP successfully authenticated! Job is now In Progress.",
+    data: populated,
+  });
+});
+
+/**
+ * @desc Mark booking completed and execute 95/5/0 escrow settlement
+ * @route PATCH /api/bookings/:id/complete
+ * @access Private
+ */
+export const completeAndSettle = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) {
+    throw new ApiError(404, "Booking not found.");
+  }
+
+  booking.status = "Completed";
+  booking.paymentStatus = "escrow_settled";
+  booking.completedAt = new Date();
+  booking.settledAt = new Date();
+  await booking.save();
+
+  // Free worker availability & deposit 5% mutual welfare share
+  if (booking.workerId) {
+    await WorkerProfile.findOneAndUpdate(
+      { $or: [{ userId: booking.workerId }, { _id: booking.workerId }] },
+      {
+        availability: true,
+        $inc: {
+          jobsCompleted: 1,
+          welfareFundBalance: booking.distribution?.mutualWelfare || Math.round(Number(booking.price || 0) * 0.05),
+        },
+      }
+    );
+  }
+
+  const populated = await booking.populate("customerId workerId", "name phone");
+
+  try {
+    const io = getIO();
+    if (io) {
+      io.to(`booking_${booking._id}`).emit("booking_completed", {
+        bookingId: booking._id,
+        status: "Completed",
+        distribution: booking.distribution,
+      });
+    }
+  } catch (ioErr) {
+    // Non-fatal socket emission
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Service marked completed. 95% worker payout settled directly with 5% Mutual Welfare Fund allocated.",
+    data: populated,
+  });
+});
+

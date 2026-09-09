@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { getAdminOverview, updateWorkerVerification } from "../../api";
 import PendingVerifications from "./PendingVerifications";
 import LiveGrievanceQueue from "./LiveGrievanceQueue";
+import LiveSosQueue from "./LiveSosQueue";
 
 const reveal = { hidden: { opacity: 0, y: 14 }, visible: { opacity: 1, y: 0 } };
 
@@ -92,7 +93,10 @@ function AdminDashboard() {
                     </motion.div>
                 ))}
             </motion.div>
-
+ 
+            {/* Live Emergency SOS Rapid Dispatch Ticker */}
+            <LiveSosQueue />
+ 
             {/* Top Row Panels: Workers Review & Demand Insights */}
             <div className="admin-grid">
                 <motion.div className="admin-panel" initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: reduceMotion ? 0 : 0.08 } } }}>

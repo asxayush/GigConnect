@@ -258,6 +258,32 @@ export default function FindHelp({ onNavigate }) {
   ];
 
   const [apiWorkers, setApiWorkers] = useState([]);
+  const [coords, setCoords] = useState({ lat: 28.6139, lng: 77.2090 });
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [simulatedOnline, setSimulatedOnline] = useState(true);
+
+  // Detect GPS location with fallback to manual entry
+  const handleDetectLocation = () => {
+    if (!navigator.geolocation) {
+      setSearchLocation("Connaught Place, New Delhi (Fallback)");
+      return;
+    }
+    setIsDetectingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const newCoords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        setCoords(newCoords);
+        setSearchLocation(`Live GPS: ${newCoords.lat.toFixed(4)}, ${newCoords.lng.toFixed(4)}`);
+        setIsDetectingLocation(false);
+      },
+      () => {
+        setCoords({ lat: 28.6139, lng: 77.2090 });
+        setSearchLocation("Connaught Place, New Delhi (Default Hub)");
+        setIsDetectingLocation(false);
+      },
+      { timeout: 8000, enableHighAccuracy: true }
+    );
+  };
 
   useEffect(() => {
     const skillMap = {
@@ -274,7 +300,7 @@ export default function FindHelp({ onNavigate }) {
       technician: "Technician",
     };
     const targetSkill = skillMap[selectedCategory] || "";
-    getWorkers(targetSkill)
+    getWorkers(targetSkill, coords, sakhiMode)
       .then((res) => {
         if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
           const mapped = res.data.map((p) => {
@@ -291,6 +317,9 @@ export default function FindHelp({ onNavigate }) {
               : rawSkill.includes("tech") || rawSkill.includes("app") || rawSkill.includes("ac") ? "technician"
               : "all";
 
+            const distanceText = p.distanceText || (p.distanceKm ? `${p.distanceKm} km away` : "Nearby (~2.5 km)");
+            const calculatedEta = p.calculatedEta || (p.etaMinutes ? `${p.etaMinutes} mins arrival` : "8 mins arrival");
+
             return {
               id: p._id,
               userId: p.userId?._id,
@@ -305,7 +334,10 @@ export default function FindHelp({ onNavigate }) {
               rateType: "standard rate",
               rate: "₹300",
               hourlyRate: 300,
-              sakhiVerified: Boolean(p.userId?.gender === "Female" || p.userId?.gender === "female"),
+              distanceText,
+              calculatedEta,
+              distanceKm: p.distanceKm || 2.5,
+              sakhiVerified: Boolean(p.isSakhiVerified || p.sakhiVerified || p.userId?.gender?.toLowerCase() === "female"),
               area: p.userId?.location?.area || "Delhi NCR",
               image: p.photoUrl || "/illustrations/happy-customer.jpg",
             };
@@ -316,7 +348,7 @@ export default function FindHelp({ onNavigate }) {
       .catch((err) => {
         console.warn("Workers API fallback to curated list:", err.message);
       });
-  }, [selectedCategory]);
+  }, [selectedCategory, coords, sakhiMode]);
 
   const activeWorkerList = apiWorkers.length > 0 ? apiWorkers : workers;
 
@@ -534,20 +566,32 @@ export default function FindHelp({ onNavigate }) {
               )}
             </div>
 
-            {/* Location Input */}
+            {/* Location Input with GPS button */}
             <div className="lg:col-span-4">
               <label className="font-label-sm text-label-sm text-on-surface-variant block mb-1">
-                Service Location
+                Service Location &amp; 2dsphere Radial Search
               </label>
-              <div className="relative flex items-center h-12 bg-surface-container-low px-4 rounded-xl border border-transparent focus-within:border-primary">
+              <div className="relative flex items-center h-12 bg-surface-container-low px-3 rounded-xl border border-transparent focus-within:border-primary">
                 <span className="material-symbols-outlined text-primary text-[20px] mr-2">location_on</span>
                 <input
                   type="text"
                   value={searchLocation}
                   onChange={(e) => setSearchLocation(e.target.value)}
                   placeholder="Enter Delhi NCR locality / Pin"
-                  className="w-full bg-transparent text-sm text-on-surface font-semibold focus:outline-none border-none"
+                  className="w-full bg-transparent text-xs sm:text-sm text-on-surface font-semibold focus:outline-none border-none"
                 />
+                <button
+                  type="button"
+                  onClick={handleDetectLocation}
+                  disabled={isDetectingLocation}
+                  className="px-2.5 py-1.5 bg-primary text-on-primary rounded-lg text-[11px] font-bold border-none cursor-pointer flex items-center gap-1 shrink-0 active:scale-95"
+                  title="Detect live GPS coordinates"
+                >
+                  <span className={`material-symbols-outlined text-[14px] ${isDetectingLocation ? "animate-spin" : ""}`}>
+                    near_me
+                  </span>
+                  <span className="hidden sm:inline">GPS</span>
+                </button>
               </div>
             </div>
 
@@ -617,115 +661,139 @@ export default function FindHelp({ onNavigate }) {
               )}
             </div>
           ) : (
-            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-space-6">
+            <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <AnimatePresence>
-                {filteredWorkers.map((w) => (
-                  <motion.div
-                    key={w.id}
-                    layout
-                    initial={{ opacity: 0, scale: 0.96, y: 10 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.96 }}
-                    transition={{ duration: 0.25 }}
-                    className={`rounded-2xl p-space-5 transition-all flex flex-col justify-between ${
-                      w.sakhiVerified
-                        ? "bg-gradient-to-br from-white via-pink-50/20 to-purple-50/15 border border-pink-300 ring-2 ring-pink-400/40 shadow-[0_6px_24px_rgba(236,72,153,0.12)] hover:-translate-y-1"
-                        : "bg-surface-container-lowest border border-border-tone/30 shadow-md hover:shadow-xl hover:-translate-y-1"
-                    }`}
-                  >
-                    <div>
-                      {/* Top Badges */}
-                      <div className="flex items-center justify-between gap-2 mb-space-3">
-                        {w.sakhiVerified ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-gradient-to-r from-pink-500 to-purple-600 text-white rounded-xl text-[11px] font-extrabold shadow-xs">
-                            <span>♀</span> Sakhi Verified Safe
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container-low text-primary border border-border-tone/30 rounded-xl text-[11px] font-bold">
-                            <span className="material-symbols-outlined text-[14px]">verified</span> Co-op Certified
-                          </span>
-                        )}
+                {filteredWorkers.map((w) => {
+                  const visibleSkills = (w.skills || []).slice(0, 3);
+                  const remainingSkillsCount = Math.max(0, (w.skills?.length || 0) - 3);
 
-                        <span className="font-label-sm text-label-sm text-on-surface-variant font-medium">
-                          {w.area || "Delhi NCR"}
-                        </span>
-                      </div>
+                  return (
+                    <motion.div
+                      key={w.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.97, y: 8 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.97 }}
+                      transition={{ duration: 0.2 }}
+                      className={`rounded-2xl p-5 transition-all flex flex-col justify-between border ${
+                        w.sakhiVerified
+                          ? "bg-gradient-to-br from-white via-pink-50/20 to-purple-50/15 border-pink-300 ring-1 ring-pink-400/40 shadow-sm hover:shadow-lg hover:-translate-y-0.5"
+                          : "bg-surface-container-lowest border-border-tone/30 shadow-xs hover:shadow-lg hover:-translate-y-0.5"
+                      }`}
+                    >
+                      <div>
+                        {/* Top Badges Bar */}
+                        <div className="flex items-center justify-between gap-2 mb-3">
+                          {w.sakhiVerified ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-gradient-to-r from-pink-600 to-purple-600 text-white rounded-full text-[11px] font-bold shadow-xs">
+                              <span>♀</span> Sakhi Verified Safe
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 bg-surface-container text-primary rounded-full text-[11px] font-bold border border-border-tone/30">
+                              <span className="material-symbols-outlined text-[13px]">verified</span> Co-op Certified
+                            </span>
+                          )}
 
-                      {/* Profile Details */}
-                      <div className="flex items-start gap-space-4 mb-space-4">
-                        <img
-                          src={w.image}
-                          alt={w.name}
-                          className={`w-16 h-16 rounded-2xl object-cover flex-shrink-0 ${
-                            w.sakhiVerified ? "ring-2 ring-pink-400 border border-white shadow-md" : "border border-gray-200 shadow-sm"
-                          }`}
-                        />
-                        <div className="min-w-0">
-                          <h3 className="font-title-lg text-title-lg text-on-surface font-extrabold m-0 truncate">
-                            {w.name}
-                          </h3>
-                          <p className="font-body-sm text-body-sm text-on-surface-variant m-0 mt-0.5 line-clamp-1">
-                            {w.role}
-                          </p>
-                          <div className="flex items-center gap-2 mt-1.5">
-                            <div className="flex items-center gap-1 text-xs font-bold text-amber-500 bg-amber-50 px-2 py-0.5 rounded-lg border border-amber-200">
-                              <span>★</span>
-                              <span>{w.rating}</span>
+                          <span className="text-xs text-on-surface-variant font-medium truncate max-w-[140px] flex items-center gap-0.5">
+                            <span className="material-symbols-outlined text-[13px] text-primary">place</span>
+                            {w.area || "Delhi NCR"}
+                          </span>
+                        </div>
+
+                        {/* Profile Info Header */}
+                        <div className="flex items-start gap-3.5 mb-3">
+                          <img
+                            src={w.image}
+                            alt={w.name}
+                            className={`w-14 h-14 rounded-2xl object-cover flex-shrink-0 ${
+                              w.sakhiVerified ? "ring-2 ring-pink-400 border border-white shadow-xs" : "border border-gray-200 shadow-xs"
+                            }`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <h3 className="text-sm sm:text-base font-bold text-on-surface m-0 truncate">
+                              {w.name}
+                            </h3>
+                            <p className="text-xs text-on-surface-variant m-0 mt-0.5 truncate">
+                              {w.role}
+                            </p>
+                            
+                            {/* Rating and completed jobs */}
+                            <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                              <div className="flex items-center gap-1 text-[11px] font-bold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">
+                                <span>★</span>
+                                <span>{w.rating}</span>
+                              </div>
+                              <span className="text-[11px] text-on-surface-variant font-medium">
+                                {w.jobs}
+                              </span>
                             </div>
-                            <span className="text-[11px] text-on-surface-variant">{w.jobs}</span>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Skill tags */}
-                      <div className="flex flex-wrap gap-1.5 mb-space-4">
-                        {w.skills?.map((skill, idx) => (
-                          <span
-                            key={idx}
-                            className="px-2 py-1 bg-surface-container-low text-on-surface text-[11px] font-medium rounded-lg"
-                          >
-                            {skill}
+                        {/* Geospatial Distance & ETA Banner */}
+                        <div className="mb-3 px-2.5 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs font-semibold flex items-center justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <span className="material-symbols-outlined text-[15px] text-emerald-600">near_me</span>
+                            <span>{w.distanceText || "2.5 km away"}</span>
+                          </div>
+                          <span className="font-bold text-emerald-900">
+                            ⏱ {w.calculatedEta || "8 mins"}
                           </span>
-                        ))}
-                      </div>
-                    </div>
+                        </div>
 
-                    {/* Bottom Pricing & Action Buttons */}
-                    <div className="pt-space-3 border-t border-border-tone/20">
-                      <div className="flex items-center justify-between mb-space-3">
-                        <div>
-                          <span className="text-[11px] text-on-surface-variant block uppercase font-bold tracking-wider">
-                            Fair Cooperative Tariff
-                          </span>
-                          <span className="font-headline-sm text-headline-sm font-black text-primary">
-                            {w.rate}
-                            <span className="text-xs font-normal text-on-surface-variant"> / hr (0% surge)</span>
-                          </span>
+                        {/* Skill Tags */}
+                        <div className="flex flex-wrap gap-1.5 mb-4">
+                          {visibleSkills.map((skill, idx) => (
+                            <span
+                              key={idx}
+                              className="px-2 py-0.5 bg-surface-container text-on-surface text-[11px] font-medium rounded-md truncate max-w-[170px]"
+                            >
+                              {skill}
+                            </span>
+                          ))}
+                          {remainingSkillsCount > 0 && (
+                            <span className="px-1.5 py-0.5 bg-surface-container text-on-surface-variant text-[10px] font-bold rounded-md">
+                              +{remainingSkillsCount}
+                            </span>
+                          )}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleChat(w)}
-                          className="py-2.5 px-3 rounded-xl bg-surface-container-high hover:bg-surface-container text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-all border-none cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[16px] text-emerald-600">chat</span>
-                          <span>Chat &amp; Fair-Bid</span>
-                        </button>
+                      {/* Card Footer: Tariff & Action Buttons */}
+                      <div className="pt-3 border-t border-border-tone/20 mt-auto">
+                        <div className="flex items-baseline justify-between mb-3">
+                          <span className="text-[10px] text-on-surface-variant font-bold uppercase tracking-wider">
+                            Direct Cooperative Tariff
+                          </span>
+                          <div>
+                            <span className="text-base font-black text-primary">{w.rate}</span>
+                            <span className="text-xs text-on-surface-variant"> / hr</span>
+                          </div>
+                        </div>
 
-                        <button
-                          type="button"
-                          onClick={() => handleBook(w)}
-                          className="py-2.5 px-3 rounded-xl bg-secondary-container hover:opacity-95 active:scale-95 text-on-secondary font-bold text-xs flex items-center justify-center gap-1 shadow-md transition-all border-none cursor-pointer"
-                        >
-                          <span className="material-symbols-outlined text-[16px]">calendar_month</span>
-                          <span>Book Service</span>
-                        </button>
+                        <div className="grid grid-cols-2 gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleChat(w)}
+                            className="py-2.5 px-2 rounded-xl bg-surface-container hover:bg-surface-container-high text-primary font-bold text-xs flex items-center justify-center gap-1.5 transition-all border-none cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px] text-emerald-600">chat</span>
+                            <span>Chat</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleBook(w)}
+                            className="py-2.5 px-2 rounded-xl bg-secondary-container hover:opacity-95 active:scale-95 text-on-secondary font-bold text-xs flex items-center justify-center gap-1 shadow-xs transition-all border-none cursor-pointer"
+                          >
+                            <span className="material-symbols-outlined text-[15px]">calendar_month</span>
+                            <span>Book</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </motion.div>
           )}

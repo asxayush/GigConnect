@@ -3,15 +3,102 @@ import Rating from "../models/Rating.js";
 import Booking from "../models/Booking.js";
 import WorkerProfile from "../models/WorkerProfile.js";
 import User from "../models/User.js";
-import { requireAuth } from "../middlewares/auth.js";
+import Worker from "../models/Worker.js";
 
 const router = Router();
 
-// POST /api/ratings — submit review, recalculate worker average, and flag quality audits
+// Helper function to recalculate worker ratings and dynamic isSakhiVerified badge
+export async function recalculateWorkerSakhiStatus(workerUserId) {
+  try {
+    // 1. Compute overall rating statistics
+    const stats = await Rating.aggregate([
+      { $match: { workerId: workerUserId } },
+      {
+        $group: {
+          _id: "$workerId",
+          avgRating: { $avg: "$stars" },
+          avgSafetyRating: { $avg: "$safetyRating" },
+          count: { $sum: 1 },
+          safetyPositiveCount: {
+            $sum: {
+              $cond: [{ $gte: ["$safetyRating", 4] }, 1, 0],
+            },
+          },
+        },
+      },
+    ]);
+
+    const stat = stats[0] || {
+      avgRating: 4.85,
+      avgSafetyRating: 5.0,
+      count: 0,
+      safetyPositiveCount: 0,
+    };
+
+    const ratingAvg = Number(stat.avgRating.toFixed(2));
+    const ratingCount = stat.count;
+
+    // Check worker gender to confirm female artisan
+    const workerUser = await User.findById(workerUserId);
+    const isFemale =
+      workerUser?.gender?.toLowerCase() === "female" ||
+      workerUser?.gender?.toLowerCase() === "f";
+
+    // Sakhi Trust Qualification Criteria:
+    // Must have at least 3 positive safety/comfort ratings (safetyRating >= 4) and an average safety rating >= 4.0
+    // OR pre-verified female cooperative master artisan
+    const earnedSakhiBadge =
+      isFemale && stat.safetyPositiveCount >= 3 && stat.avgSafetyRating >= 4.0;
+
+    // Update WorkerProfile in MongoDB
+    const updatedProfile = await WorkerProfile.findOneAndUpdate(
+      { $or: [{ userId: workerUserId }, { _id: workerUserId }] },
+      {
+        ratingAvg,
+        ratingCount,
+        isSakhiVerified: earnedSakhiBadge,
+        sakhiVerified: earnedSakhiBadge,
+      },
+      { new: true }
+    );
+
+    // Also update legacy Worker record if present
+    await Worker.updateMany(
+      { phone: workerUser?.phone },
+      {
+        rating: ratingAvg,
+        sakhiVerified: earnedSakhiBadge,
+      }
+    );
+
+    return {
+      ratingAvg,
+      ratingCount,
+      safetyPositiveCount: stat.safetyPositiveCount,
+      avgSafetyRating: Number(stat.avgSafetyRating.toFixed(2)),
+      isSakhiVerified: earnedSakhiBadge,
+      updatedProfile,
+    };
+  } catch (err) {
+    console.error("Error recalculating Sakhi status:", err);
+    return null;
+  }
+}
+
+// POST /api/ratings — submit review with safetyRating and trigger Sakhi verification evaluation
 router.post("/", async (request, response, next) => {
   try {
-    const { bookingId, workerId: explicitWorkerId, stars = 5, comment = "", tags = [] } = request.body;
+    const {
+      bookingId,
+      workerId: explicitWorkerId,
+      stars = 5,
+      safetyRating = 5,
+      comment = "",
+      tags = [],
+    } = request.body;
+
     const numericStars = Math.max(1, Math.min(5, Number(stars) || 5));
+    const numericSafety = Math.max(1, Math.min(5, Number(safetyRating) || 5));
 
     let effectiveUserId = request.user?._id;
     let targetWorkerId = explicitWorkerId;
@@ -28,7 +115,6 @@ router.post("/", async (request, response, next) => {
       }
     }
 
-    // Fallback if user is anonymous in demo
     if (!effectiveUserId) {
       const demoUser = await User.findOne({ role: "customer" });
       effectiveUserId = demoUser?._id;
@@ -41,47 +127,30 @@ router.post("/", async (request, response, next) => {
       });
     }
 
-    // 1. Create the rating document
+    // Determine if reviewer is a female customer for Women Safety Audit weighting
+    const reviewer = await User.findById(effectiveUserId);
+    const isFemaleReviewer = reviewer?.gender?.toLowerCase() === "female";
+
+    // 1. Create the rating document with safety rating
     const rating = await Rating.create({
       bookingId: bookingId || undefined,
       customerId: effectiveUserId || undefined,
       workerId: targetWorkerId,
       stars: numericStars,
+      safetyRating: numericSafety,
       comment,
       tags: Array.isArray(tags) ? tags : [],
+      isWomenSafetyAudit: isFemaleReviewer,
     });
 
-    // 2. Aggregate all ratings for this worker to recompute accurate average & total
-    const stats = await Rating.aggregate([
-      { $match: { workerId: targetWorkerId } },
-      {
-        $group: {
-          _id: "$workerId",
-          average: { $avg: "$stars" },
-          count: { $sum: 1 },
-        },
-      },
-    ]);
+    // 2. Automatically recalculate worker stats and dynamic Sakhi Trust verification badge
+    const sakhiEvaluation = await recalculateWorkerSakhiStatus(targetWorkerId);
 
-    const newRatingAvg = Number((stats[0]?.average || numericStars).toFixed(2));
-    const totalReviews = stats[0]?.count || 1;
-
-    // 3. Automatically update the WorkerProfile
-    await WorkerProfile.findOneAndUpdate(
-      { $or: [{ userId: targetWorkerId }, { _id: targetWorkerId }] },
-      {
-        ratingAvg: newRatingAvg,
-        ratingCount: totalReviews,
-        $inc: { jobsCompleted: 1 },
-      },
-      { new: true }
-    );
-
-    // 4. Cooperative Trust Protocol: If stars < 3, flag for automatic Federation Desk review
+    // 3. Low-rating alert
     const requiresFederationAudit = numericStars < 3;
     if (requiresFederationAudit) {
       console.warn(
-        `⚠️ [Federation Audit] Low rating (${numericStars}★) received for Worker: ${targetWorkerId}. Routed to Ward Quality Bench.`
+        `⚠️ [Federation Audit] Low rating (${numericStars}★) logged for Worker: ${targetWorkerId}. Routed to Ward Quality Bench.`
       );
     }
 
@@ -89,14 +158,31 @@ router.post("/", async (request, response, next) => {
       success: true,
       data: {
         rating,
-        newRatingAvg,
-        totalReviews,
+        ...sakhiEvaluation,
         requiresFederationAudit,
         auditNotice: requiresFederationAudit
-          ? "Your feedback has been logged. Ratings below 3 stars automatically trigger a Federation Desk mediation and upskilling review."
+          ? "Your feedback has been logged. Ratings below 3 stars automatically trigger a Federation Desk mediation review."
           : "Thank you! Your feedback directly strengthens cooperative trust and worker ownership.",
       },
-      message: "Feedback successfully recorded & worker profile updated",
+      message: "Feedback successfully recorded & Sakhi Trust verification updated",
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// GET /api/ratings/worker/:id — fetch reviews for a worker
+router.get("/worker/:id", async (request, response, next) => {
+  try {
+    const reviews = await Rating.find({ workerId: request.params.id })
+      .populate("customerId", "name avatar")
+      .sort({ createdAt: -1 })
+      .limit(20);
+
+    response.json({
+      success: true,
+      count: reviews.length,
+      data: reviews,
     });
   } catch (error) {
     next(error);

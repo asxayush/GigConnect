@@ -36,48 +36,163 @@ const upload = multer({
     ),
 });
 
-// GET /api/workers — public worker directory with optional geo and skill filters
+// Helper for Haversine distance in KM
+function getHaversineDistanceKm(lat1, lon1, lat2, lon2) {
+  const R = 6371; // Earth radius in km
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+// GET /api/workers — robust geospatial worker directory with 2dsphere matching & dynamic ETA
 router.get("/", async (request, response, next) => {
   try {
     const filter = {
       verificationStatus: "verified",
-      photoUrl: { $exists: true, $ne: "" },
-      availability: true,
+      availability: true, // Only match available workers (not currently on job)
     };
-    if (request.query.skill) filter.skills = request.query.skill;
 
-    // Sakhi Mode Enforcement: Filter for women / Sakhi verified cooperative members
-    const isSakhiOnly = request.query.sakhiOnly === "true" || request.query.sakhiMode === "true";
+    // Category / Skill filter
+    const searchCategory =
+      request.query.serviceCategory ||
+      request.query.category ||
+      request.query.skill;
+
+    if (searchCategory && searchCategory !== "all") {
+      filter.skills = { $regex: new RegExp(searchCategory, "i") };
+    }
+
+    // Sakhi Mode Enforcement: Filter for female / Sakhi verified cooperative members
+    const isSakhiOnly =
+      request.query.sakhiOnly === "true" || request.query.sakhiMode === "true";
     if (isSakhiOnly) {
       filter.$or = [{ sakhiVerified: true }, { isSakhiVerified: true }];
     }
 
+    const hasCoords =
+      request.query.lat !== undefined &&
+      request.query.lng !== undefined &&
+      !isNaN(Number(request.query.lat)) &&
+      !isNaN(Number(request.query.lng));
+
+    const userLat = hasCoords ? Number(request.query.lat) : 28.6139; // Delhi NCR default
+    const userLng = hasCoords ? Number(request.query.lng) : 77.209;
+    const radiusKm = Number(request.query.radiusKm || 30);
+    const maxDistanceMeters = radiusKm * 1000;
+
     let profiles;
-    if (request.query.lat && request.query.lng) {
-      const maxDistance = Number(request.query.radiusKm || 10) * 1000;
+
+    if (hasCoords) {
+      // 2dsphere geospatial search using $nearSphere
       profiles = await WorkerProfile.find({
         ...filter,
         location: {
-          $near: {
+          $nearSphere: {
             $geometry: {
               type: "Point",
-              coordinates: [
-                Number(request.query.lng),
-                Number(request.query.lat),
-              ],
+              coordinates: [userLng, userLat],
             },
-            $maxDistance: maxDistance,
+            $maxDistance: maxDistanceMeters,
           },
         },
       })
-        .populate("userId", "name phone location gender")
-        .sort({ ratingAvg: -1 });
+        .populate("userId", "name phone email location gender avatar")
+        .lean();
     } else {
       profiles = await WorkerProfile.find(filter)
-        .populate("userId", "name phone location gender")
-        .sort({ ratingAvg: -1 });
+        .populate("userId", "name phone email location gender avatar")
+        .sort({ ratingAvg: -1 })
+        .lean();
     }
-    response.json({ success: true, data: profiles, message: "Workers fetched" });
+
+    // Map profiles and calculate exact distance + dynamic ETA (speed = 25 km/h urban)
+    const enrichedWorkers = profiles.map((p) => {
+      let distanceKm = null;
+      let etaMinutes = null;
+      const coords = p.location?.coordinates;
+
+      if (Array.isArray(coords) && coords.length === 2) {
+        const [wLng, wLat] = coords;
+        const dist = getHaversineDistanceKm(userLat, userLng, wLat, wLng);
+        distanceKm = Math.round(dist * 10) / 10;
+        // ETA based on 25 km/h urban transit speed, minimum 5 mins
+        etaMinutes = Math.max(5, Math.round((distanceKm / 25) * 60));
+      }
+
+      return {
+        ...p,
+        distanceKm,
+        etaMinutes,
+        calculatedEta: etaMinutes ? `${etaMinutes} mins` : "15 mins",
+        distanceText: distanceKm !== null ? `${distanceKm} km away` : "Nearby",
+      };
+    });
+
+    // If coordinates provided, sort by distance ascending
+    if (hasCoords) {
+      enrichedWorkers.sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
+    }
+
+    response.json({
+      success: true,
+      count: enrichedWorkers.length,
+      data: enrichedWorkers,
+      userLocation: { lat: userLat, lng: userLng },
+      message: `${enrichedWorkers.length} cooperative workers matched`,
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+// PATCH /api/workers/location — update worker's live location & availability (for demo simulation & live GPS)
+router.patch("/location", requireAuth, async (request, response, next) => {
+  try {
+    const { lat, lng, coordinates, availability } = request.body;
+    let targetCoords = null;
+
+    if (Array.isArray(coordinates) && coordinates.length === 2) {
+      targetCoords = [Number(coordinates[0]), Number(coordinates[1])];
+    } else if (lat !== undefined && lng !== undefined) {
+      targetCoords = [Number(lng), Number(lat)];
+    }
+
+    const updates = {};
+    if (targetCoords) {
+      updates.location = {
+        type: "Point",
+        coordinates: targetCoords,
+      };
+    }
+    if (availability !== undefined) {
+      updates.availability = Boolean(availability);
+    }
+
+    const profile = await WorkerProfile.findOneAndUpdate(
+      { $or: [{ userId: request.user._id }, { _id: request.user._id }] },
+      updates,
+      { new: true, runValidators: true }
+    ).populate("userId", "name phone location gender avatar");
+
+    if (!profile) {
+      return response.status(404).json({
+        success: false,
+        message: "Worker profile not found for authenticated user",
+      });
+    }
+
+    response.json({
+      success: true,
+      data: profile,
+      message: "Worker live coordinates & availability updated successfully",
+    });
   } catch (error) {
     next(error);
   }

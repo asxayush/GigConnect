@@ -51,3 +51,13 @@ export const registerWorker = (data, token) => apiRequest("/api/workers", { meth
 export const updateMyWorkerProfile = (data, token) => apiRequest("/api/workers/me", { method: "PATCH", body: data, headers: { Authorization: `Bearer ${token}` } });
 export const updateCustomerProfile = (data, token) => apiRequest("/api/auth/profile", { method: "PATCH", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
 export const createPaymentOrder = (bookingId, token) => apiRequest("/api/payments/orders", { method: "POST", body: JSON.stringify({ bookingId }), headers: { Authorization: `Bearer ${token}` } });
+export const verifyPayment = (data, token) => apiRequest("/api/payments/verify", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
+export const verifyBookingOtp = (bookingId, otp, token) => apiRequest(`/api/bookings/${bookingId}/verify-otp`, { method: "PATCH", body: JSON.stringify({ otp }), headers: { Authorization: `Bearer ${token}` } });
+export const completeBooking = (bookingId, token) => apiRequest(`/api/bookings/${bookingId}/complete`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
+export const updateWorkerLiveLocation = (data, token) => apiRequest("/api/workers/location", { method: "PATCH", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
+
+// Tool Bank APIs
+export const getToolInventory = () => apiRequest("/api/toolbank/inventory");
+export const rentToolItem = (toolId, token) => apiRequest("/api/toolbank/rent", { method: "POST", body: JSON.stringify({ toolId }), headers: { Authorization: `Bearer ${token}` } });
+export const returnToolItem = (rentalId, token) => apiRequest("/api/toolbank/return", { method: "POST", body: JSON.stringify({ rentalId }), headers: { Authorization: `Bearer ${token}` } });
+export const getMyToolRentals = (token) => apiRequest("/api/toolbank/my-rentals", { headers: { Authorization: `Bearer ${token}` } });

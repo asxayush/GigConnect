@@ -5,6 +5,8 @@ import {
   acceptBooking,
   getBookings,
   updateBookingStatus,
+  verifyOtpAndStart,
+  completeAndSettle,
 } from "../controllers/booking.controller.js";
 import { protect, authorize } from "../middleware/auth.js";
 import { bookingLimiter } from "../middleware/rateLimiter.js";
@@ -33,6 +35,19 @@ router.patch(
   "/:id/accept",
   authorize("worker"),
   acceptBooking
+);
+
+router.patch(
+  "/:id/verify-otp",
+  validate([
+    body("otp").trim().notEmpty().withMessage("4-digit OTP is required"),
+  ]),
+  verifyOtpAndStart
+);
+
+router.patch(
+  "/:id/complete",
+  completeAndSettle
 );
 
 router.patch(
