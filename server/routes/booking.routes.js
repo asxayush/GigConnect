@@ -6,8 +6,8 @@ import {
   getBookings,
   updateBookingStatus,
   verifyOtpAndStart,
-  completeAndSettle,
 } from "../controllers/booking.controller.js";
+import { completeBookingHandler } from "../controllers/paymentController.js";
 import { protect, authorize } from "../middleware/auth.js";
 import { bookingLimiter } from "../middleware/rateLimiter.js";
 import { validate } from "../middleware/validate.js";
@@ -45,9 +45,15 @@ router.patch(
   verifyOtpAndStart
 );
 
+// Dual-Handshake Completion (Customer marks complete & releases escrow)
+router.post(
+  "/:id/complete",
+  completeBookingHandler
+);
+
 router.patch(
   "/:id/complete",
-  completeAndSettle
+  completeBookingHandler
 );
 
 router.patch(

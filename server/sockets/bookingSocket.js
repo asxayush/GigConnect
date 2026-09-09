@@ -1,6 +1,7 @@
 import { Server } from "socket.io";
 import { registerChatHandlers } from "./chatSocket.js";
 import { registerSupportHandlers } from "./supportSocket.js";
+import { registerPaymentHandlers } from "./paymentSocket.js";
 import EmergencyAlert from "../models/EmergencyAlert.js";
 
 let ioInstance = null;
@@ -27,6 +28,9 @@ export const initBookingSocket = (httpServer) => {
 
     // Register Support & Escalation Handlers
     registerSupportHandlers(ioInstance, socket);
+
+    // Register Payment & Mutual Consent Overtime Handlers
+    registerPaymentHandlers(ioInstance, socket);
 
     // 1. Worker joins private room
     socket.on("joinWorker", ({ workerId }) => {
