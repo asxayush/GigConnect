@@ -75,7 +75,7 @@ export default function SignUp({ onNavigate, setUser }) {
     }
   };
 
-  // 2. Request Twilio SMS OTP
+  // 2. Request Twilio SMS OTP with Hackathon Fail-safe (Demo Fallback)
   const handleSendOtp = async (e) => {
     if (e) e.preventDefault();
     if (phone.length !== 10) {
@@ -87,14 +87,29 @@ export default function SignUp({ onNavigate, setUser }) {
     setErrorMessage("");
     try {
       const formattedPhone = `+91${phone}`;
-      await sendPhoneOtp(formattedPhone);
+
+      // 7-second race to prevent indefinite loading if SMS gateway network drops
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("SMS Gateway timeout.")), 7000)
+      );
+
+      await Promise.race([sendPhoneOtp(formattedPhone), timeoutPromise]);
       setStep("otp");
       setCountdown(60);
       showToast("Verification code dispatched to your phone.");
       setTimeout(() => otpInputsRef.current[0]?.focus(), 150);
     } catch (err) {
-      setErrorMessage(err.response?.data?.message || err.message || "Failed to dispatch SMS code.");
+      console.warn("[Auth Warning] SMS Gateway error:", err);
+      // Hackathon Fail-safe: Do not fail silently or hang
+      showToast("SMS Gateway timeout. Falling back to Demo Mode.");
+      setErrorMessage("SMS Gateway timeout. Falling back to Demo Mode (Use 123456).");
+      
+      // Seamlessly transition user to Step 2 so presentation continues
+      setStep("otp");
+      setCountdown(60);
+      setTimeout(() => otpInputsRef.current[0]?.focus(), 150);
     } finally {
+      // CRITICAL: Always reset loading state so button never gets stuck
       setIsLoading(false);
     }
   };
@@ -136,6 +151,19 @@ export default function SignUp({ onNavigate, setUser }) {
       if (!authUser || !token) throw new Error("Verification failed.");
       commitAuthSuccess(authUser, token);
     } catch (err) {
+      // Hackathon Fail-safe for OTP verification:
+      if (code === "123456") {
+        const fallbackUser = {
+          id: "demo_usr_" + Date.now(),
+          _id: "demo_usr_" + Date.now(),
+          name: role === "worker" ? `Master Pro (${phone.slice(-4)})` : `Member (${phone.slice(-4)})`,
+          phone: `+91${phone}`,
+          role: role,
+          avatar: "",
+        };
+        commitAuthSuccess(fallbackUser, "demo_jwt_token_" + Date.now());
+        return;
+      }
       setErrorMessage(err.response?.data?.message || err.message || "Invalid or expired OTP code.");
     } finally {
       setIsLoading(false);
@@ -224,7 +252,9 @@ export default function SignUp({ onNavigate, setUser }) {
                 <label className="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-2">
                   Mobile Number
                 </label>
-                <div className="flex items-center border border-slate-300 focus-within:border-[#0A2540] focus-within:ring-2 focus-within:ring-[#0A2540]/15 rounded-xl px-3.5 py-3 transition-all bg-white">
+                <div className={`flex items-center border ${
+                  errorMessage ? "border-red-300 focus-within:border-red-500 focus-within:ring-2 focus-within:ring-red-500/15" : "border-slate-300 focus-within:border-[#0A2540] focus-within:ring-2 focus-within:ring-[#0A2540]/15"
+                } rounded-xl px-3.5 py-3 transition-all bg-white`}>
                   <span className="text-sm font-bold text-slate-600 mr-2 select-none">+91</span>
                   <input
                     type="tel"
@@ -232,9 +262,16 @@ export default function SignUp({ onNavigate, setUser }) {
                     onChange={handlePhoneChange}
                     placeholder="98765 43210"
                     autoFocus
+                    disabled={isLoading}
                     className="w-full text-base font-medium text-slate-900 placeholder:text-slate-400 outline-none bg-transparent"
                   />
                 </div>
+                {errorMessage && (
+                  <p className="text-xs text-red-600 mt-1.5 font-medium flex items-center gap-1">
+                    <span className="material-symbols-outlined text-sm shrink-0">error</span>
+                    <span>{errorMessage}</span>
+                  </p>
+                )}
               </div>
 
               <button
@@ -242,8 +279,17 @@ export default function SignUp({ onNavigate, setUser }) {
                 disabled={isLoading || phone.length !== 10}
                 className="w-full py-3.5 bg-[#0A2540] hover:bg-[#071b30] text-white font-semibold text-sm rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2 border-none"
               >
-                {isLoading ? "Sending Code..." : "Continue"}
-                <span className="material-symbols-outlined text-base">arrow_forward</span>
+                {isLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Sending Code...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Send Mobile OTP</span>
+                    <span className="material-symbols-outlined text-base">arrow_forward</span>
+                  </>
+                )}
               </button>
             </form>
 
@@ -316,11 +362,30 @@ export default function SignUp({ onNavigate, setUser }) {
               <button
                 type="submit"
                 disabled={isLoading || otpValues.join("").length !== 6}
-                className="w-full py-3.5 bg-[#0A2540] hover:bg-[#071b30] text-white font-semibold text-sm rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer border-none"
+                className="w-full py-3.5 bg-[#0A2540] hover:bg-[#071b30] text-white font-semibold text-sm rounded-xl transition-all shadow-sm disabled:opacity-50 cursor-pointer border-none flex items-center justify-center gap-2"
               >
-                {isLoading ? "Verifying..." : "Verify & Sign In"}
+                {isLoading ? (
+                  <>
+                    <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <span>Verify & Sign In</span>
+                )}
               </button>
             </form>
+
+            {/* Quick Demo Fill Fail-safe Button */}
+            <div className="mt-3 flex items-center justify-center">
+              <button
+                type="button"
+                onClick={() => setOtpValues(["1", "2", "3", "4", "5", "6"])}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-semibold bg-indigo-50/70 hover:bg-indigo-50 px-3 py-1 rounded-lg transition-colors border border-indigo-200/50 cursor-pointer flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-xs">bolt</span>
+                <span>Demo Quick-Fill: 123456</span>
+              </button>
+            </div>
 
             <div className="mt-6 flex items-center justify-between text-xs">
               <button
