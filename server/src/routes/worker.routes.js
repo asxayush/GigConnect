@@ -4,6 +4,7 @@ import path from "node:path";
 import multer from "multer";
 import { fileURLToPath } from "node:url";
 import User from "../models/User.js";
+import Worker from "../models/Worker.js";
 import WorkerProfile from "../models/WorkerProfile.js";
 import { requireAuth, requireRole } from "../middlewares/auth.js";
 
@@ -128,9 +129,11 @@ router.get("/", async (request, response, next) => {
 
       return {
         ...p,
+        lat: Array.isArray(coords) ? coords[1] : null,
+        lng: Array.isArray(coords) ? coords[0] : null,
         distanceKm,
         etaMinutes,
-        calculatedEta: etaMinutes ? `${etaMinutes} mins` : "15 mins",
+        calculatedEta: etaMinutes ? `${etaMinutes} mins` : null,
         distanceText: distanceKm !== null ? `${distanceKm} km away` : "Nearby",
       };
     });

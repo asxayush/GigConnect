@@ -68,27 +68,15 @@ export default function RatingView({ booking, onNavigate }) {
     try {
       const token = localStorage.getItem("gigconnect_token");
       const payload = {
-        bookingId: activeBooking.id,
-        workerId: activeBooking.worker?.id,
+        bookingId: activeBooking.id || activeBooking._id,
+        workerId: activeBooking.worker?.id || activeBooking.worker?._id,
         stars,
+        safetyRating: stars,
         comment,
         tags: selectedTags,
       };
 
-      let result = null;
-      try {
-        result = await submitRating(payload, token);
-      } catch (apiErr) {
-        console.warn("Rating API fallback to offline handler:", apiErr.message);
-        result = {
-          success: true,
-          data: {
-            newRatingAvg: Number((4.85 + (stars - 4) * 0.05).toFixed(2)),
-            requiresFederationAudit: stars < 3,
-          },
-        };
-      }
-
+      const result = await submitRating(payload, token);
       setResponseStats(result?.data);
       setIsSuccess(true);
       showToast(

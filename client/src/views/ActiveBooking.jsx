@@ -146,7 +146,9 @@ export default function ActiveBooking({ booking, onNavigate }) {
       }
     });
 
-    // Listen for SOS status updates from Federation Desk
+    socket.on("sos_error", (data) => {
+      showToast("SOS socket error: " + (data?.message || "alert not persisted"));
+    });
     socket.on("sos_status_update", (data) => {
       if (data.status === "active") {
         setIsSosActive(true);
@@ -191,41 +193,50 @@ export default function ActiveBooking({ booking, onNavigate }) {
 
   // Trigger Emergency SOS Handshake
   const handleTriggerSos = async () => {
-    try {
-      const payload = {
-        bookingId: activeBooking.id,
-        workerId: activeBooking.worker?.id,
-        location: {
-          lat: customerPos[0],
-          lng: customerPos[1],
-          coordinates: [customerPos[1], customerPos[0]],
-        },
-        reason: "🚨 Emergency SOS Triggered by Customer via Active Booking UI",
-        metadata: {
-          customerName: activeBooking.customer?.name,
-          workerName: activeBooking.worker?.name,
-          address: activeBooking.customer?.address,
-        },
-      };
+    const payload = {
+      bookingId: activeBooking.id || activeBooking._id,
+      workerId: activeBooking.worker?.id || activeBooking.worker?._id,
+      location: {
+        lat: customerPos[0],
+        lng: customerPos[1],
+        coordinates: [customerPos[1], customerPos[0]],
+      },
+      reason: "🚨 Emergency SOS Triggered by Customer via Active Booking UI",
+      address: activeBooking.customer?.address || "Delhi NCR Service Site",
+      metadata: {
+        customerName: activeBooking.customer?.name,
+        workerName: activeBooking.worker?.name,
+        address: activeBooking.customer?.address,
+      },
+    };
 
-      // 1. Emit via socket
+    try {
       if (socketRef.current && socketRef.current.connected) {
         socketRef.current.emit("trigger_sos", payload);
       }
 
-      // 2. Backup REST trigger
-      try {
-        const token = localStorage.getItem("gigconnect_token");
-        await triggerSosAlert(payload, token);
-      } catch (err) {
-        console.warn("SOS REST fallback error:", err.message);
+      const token = localStorage.getItem("gigconnect_token");
+      const restRes = await triggerSosAlert(payload, token);
+      if (!restRes?.success) {
+        throw new Error(restRes?.message || "SOS API did not confirm the alert.");
       }
 
       setIsSosActive(true);
+      setSosAlertId(restRes?.data?.alertId || restRes?.data?.sosCode);
       setShowSosModal(false);
-      showToast("🚨 Federation Admins have been alerted and are tracking this job.");
+      const emailFailed = restRes?.warning || restRes?.data?.emailNotificationSent === false;
+      showToast(
+        emailFailed
+          ? "🚨 SOS logged with Federation Desk, but emergency email failed. Keep retrying if you can."
+          : "🚨 Federation Desk has been alerted and is tracking this job."
+      );
     } catch (err) {
-      showToast("Failed to trigger SOS alert: " + err.message);
+      setIsSosActive(false);
+      setShowSosModal(false);
+      showToast(
+        "SOS FAILED: alert was not confirmed by the server. Call 112 / 1091 if you are in danger. " +
+          (err.message || "No network.")
+      );
     }
   };
 

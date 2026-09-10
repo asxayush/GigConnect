@@ -235,28 +235,37 @@ router.post(["/rent", "/:id/reserve", "/:id/rent"], requireAuth, async (req, res
       });
     }
 
-    // Gate 3: Check Tool Availability & Stock
-    const tool = await ToolItem.findOne({
-      $or: [{ toolId: targetToolId }, { _id: targetToolId.match(/^[0-9a-fA-F]{24}$/) ? targetToolId : null }],
-    });
+    // Gate 3: Atomic stock decrement — only succeeds if a unit is still available
+    const tool = await ToolItem.findOneAndUpdate(
+      {
+        $or: [
+          { toolId: targetToolId },
+          ...(targetToolId.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: targetToolId }] : []),
+        ],
+        availableStock: { $gt: 0 },
+      },
+      { $inc: { availableStock: -1 } },
+      { new: true }
+    );
 
     if (!tool) {
-      return res.status(404).json({
+      const exists = await ToolItem.findOne({
+        $or: [
+          { toolId: targetToolId },
+          ...(targetToolId.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: targetToolId }] : []),
+        ],
+      });
+      if (!exists) {
+        return res.status(404).json({
+          success: false,
+          message: "Tool not found in cooperative tool bank inventory",
+        });
+      }
+      return res.status(409).json({
         success: false,
-        message: "Tool not found in cooperative tool bank inventory",
+        message: `This tool (${exists.name}) is currently out of stock at ${exists.hubName}.`,
       });
     }
-
-    if (tool.availableStock <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: `This tool (${tool.name}) is currently out of stock at ${tool.hubName}.`,
-      });
-    }
-
-    // Atomic Stock Decrement
-    tool.availableStock -= 1;
-    await tool.save();
 
     const rentalCode = `TB-RES-${Date.now().toString().slice(-6)}`;
     const rental = await ToolRental.create({
@@ -329,12 +338,11 @@ router.post(["/return", "/:id/return"], requireAuth, async (req, res, next) => {
     rental.returnedAt = new Date();
     await rental.save();
 
-    // Increment tool stock atomically
-    const tool = await ToolItem.findOne({ toolId: rental.toolId });
-    if (tool) {
-      tool.availableStock = Math.min(tool.totalStock, tool.availableStock + 1);
-      await tool.save();
-    }
+    const tool = await ToolItem.findOneAndUpdate(
+      { toolId: rental.toolId },
+      [{ $set: { availableStock: { $min: [{ $add: ["$availableStock", 1] }, "$totalStock"] } } }],
+      { new: true }
+    );
 
     res.json({
       success: true,

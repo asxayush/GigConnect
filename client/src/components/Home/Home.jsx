@@ -91,7 +91,8 @@ function Home({ onNavigate }) {
                         skills: profile.skills || [],
                         rating: Number(profile.ratingAvg || 0).toFixed(1),
                         jobs: profile.jobsCompleted || 0,
-                        distance: "nearby",
+                        distance: profile.distanceText || (profile.distanceKm != null ? `${profile.distanceKm} km` : "nearby"),
+                        eta: profile.calculatedEta,
                         userId: profile.userId?._id,
                     })));
                     setWorkerSource("api");

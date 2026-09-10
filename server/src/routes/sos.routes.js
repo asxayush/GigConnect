@@ -1,4 +1,5 @@
 import { Router } from "express";
+import mongoose from "mongoose";
 import EmergencyAlert from "../models/EmergencyAlert.js";
 import SOSEvent from "../models/SOSEvent.js";
 import Booking from "../models/Booking.js";
@@ -7,6 +8,13 @@ import { getIO } from "../../sockets/bookingSocket.js";
 import { sendEmergencySosEmail } from "../services/emailService.js";
 
 const router = Router();
+
+function asObjectId(id) {
+  if (!id) return undefined;
+  const value = String(id);
+  if (!mongoose.Types.ObjectId.isValid(value)) return undefined;
+  return value;
+}
 
 // POST /api/sos — trigger real SOS event, send email notification, broadcast socket, and log to MongoDB
 router.post("/", async (req, res, next) => {
@@ -21,10 +29,14 @@ router.post("/", async (req, res, next) => {
       emergencyContactEmail,
     } = req.body || {};
 
+    const bookingObjectId = asObjectId(bookingId);
+    const userObjectId = asObjectId(userId);
+    const workerObjectId = asObjectId(workerId);
+
     let geoPoint = { type: "Point", coordinates: [77.209, 28.6139] };
-    if (location && Array.isArray(location.coordinates)) {
-      geoPoint = { type: "Point", coordinates: location.coordinates };
-    } else if (location && location.lat && location.lng) {
+    if (location && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
+      geoPoint = { type: "Point", coordinates: location.coordinates.map(Number) };
+    } else if (location && location.lat != null && location.lng != null) {
       geoPoint = {
         type: "Point",
         coordinates: [Number(location.lng), Number(location.lat)],
@@ -33,32 +45,30 @@ router.post("/", async (req, res, next) => {
 
     const sosCode = `SOS-${Date.now().toString().slice(-6)}`;
 
-    // Resolve caller and worker details for email & dashboard
     let customerUser = null;
     let workerUser = null;
 
-    if (userId) {
-      customerUser = await User.findById(userId);
+    if (userObjectId) {
+      customerUser = await User.findById(userObjectId);
     } else if (req.user) {
       customerUser = req.user;
     }
 
-    if (workerId) {
-      workerUser = await User.findById(workerId);
+    if (workerObjectId) {
+      workerUser = await User.findById(workerObjectId);
     }
 
-    if (bookingId && (!customerUser || !workerUser)) {
-      const booking = await Booking.findById(bookingId).populate("customerId workerId");
+    if (bookingObjectId && (!customerUser || !workerUser)) {
+      const booking = await Booking.findById(bookingObjectId).populate("customerId workerId");
       if (booking) {
         if (!customerUser && booking.customerId) customerUser = booking.customerId;
         if (!workerUser && booking.workerId) workerUser = booking.workerId;
       }
     }
 
-    // 1. Send real emergency email notification
     const emailResult = await sendEmergencySosEmail({
       sosCode,
-      bookingId,
+      bookingId: bookingObjectId || bookingId || "Direct SOS",
       userName: customerUser?.name || "Cooperative Member",
       userPhone: customerUser?.phone || "Not specified",
       workerName: workerUser?.name || "Assigned Karigar",
@@ -68,12 +78,11 @@ router.post("/", async (req, res, next) => {
       recipientEmail: emergencyContactEmail || customerUser?.email || "safety-desk@gigconnect.coop",
     });
 
-    // 2. Persist to SOSEvent collection
     const sosEvent = await SOSEvent.create({
       sosCode,
-      bookingId: bookingId || undefined,
-      userId: customerUser?._id || undefined,
-      workerId: workerUser?._id || undefined,
+      bookingId: bookingObjectId,
+      userId: customerUser?._id || userObjectId,
+      workerId: workerUser?._id || workerObjectId,
       triggeredBy: req.user?.role === "worker" ? "worker" : "customer",
       location: geoPoint,
       address,
@@ -83,11 +92,10 @@ router.post("/", async (req, res, next) => {
       status: "active",
     });
 
-    // 3. Keep EmergencyAlert in sync for backward compatibility
     const alert = await EmergencyAlert.create({
-      bookingId: bookingId || undefined,
-      userId: customerUser?._id || undefined,
-      workerId: workerUser?._id || undefined,
+      bookingId: bookingObjectId,
+      userId: customerUser?._id || userObjectId,
+      workerId: workerUser?._id || workerObjectId,
       location: geoPoint,
       status: "active",
       reason: reason || `🚨 Emergency SOS Triggered (#${sosCode})`,
@@ -96,16 +104,17 @@ router.post("/", async (req, res, next) => {
         address,
         emailMessageId: emailResult.messageId,
         emailPreviewUrl: emailResult.previewUrl,
+        emailSent: Boolean(emailResult.success),
+        emailError: emailResult.error || null,
       }),
     });
 
-    // 4. Real-time WebSocket Broadcast
     try {
       const io = getIO();
       const payload = {
         alertId: alert._id,
         sosCode,
-        bookingId,
+        bookingId: bookingObjectId || bookingId,
         userId: customerUser?._id,
         userName: customerUser?.name || "Member",
         userPhone: customerUser?.phone,
@@ -116,10 +125,12 @@ router.post("/", async (req, res, next) => {
         status: "active",
         reason: alert.reason,
         emailPreviewUrl: emailResult.previewUrl,
+        emailNotificationSent: Boolean(emailResult.success),
         triggeredAt: new Date(),
       };
 
       io.to("admin_room").emit("sos_alert_admin", payload);
+      io.to("admin_room").emit("emergency_sos_alert", payload);
       if (bookingId) {
         io.to(`booking_${bookingId}`).emit("sos_status_update", {
           ...payload,
@@ -139,9 +150,12 @@ router.post("/", async (req, res, next) => {
         emailNotificationSent: sosEvent.emailNotificationSent,
         emailPreviewUrl: sosEvent.emailPreviewUrl,
         location: geoPoint,
-        message: "🚨 Rapid Response Team alerted. Emergency email dispatched.",
+        message: emailResult.success
+          ? "🚨 Rapid Response Team alerted. Emergency email dispatched."
+          : "🚨 Rapid Response Team alerted. Email dispatch failed — alert is still logged.",
       },
       message: "Emergency SOS broadcasted successfully",
+      warning: emailResult.success ? undefined : `Email dispatch failed: ${emailResult.error || "unknown"}`,
     });
   } catch (err) {
     next(err);

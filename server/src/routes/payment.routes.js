@@ -8,6 +8,9 @@ import {
   createAddOnOrder,
   verifyAddOnPayment,
   completeBookingHandler,
+  getWorkerWallet,
+  withdrawWalletBalance,
+  handleRazorpayWebhook,
 } from "../../controllers/paymentController.js";
 
 const router = Router();
@@ -34,6 +37,9 @@ router.post("/verify/addon", verifyAddOnPayment);
 // Dual-Handshake Escrow Payout Release (Aliases)
 router.post("/bookings/:id/complete", completeBookingHandler);
 router.post("/release-payout/:id", completeBookingHandler);
+
+// Razorpay webhook (payment.captured / payment.failed)
+router.post("/webhook", handleRazorpayWebhook);
 
 // Worker Wallet Endpoints (Part 2 & Part 3)
 router.get("/wallet", getWorkerWallet);

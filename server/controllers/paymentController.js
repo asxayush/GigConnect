@@ -3,6 +3,7 @@ import Razorpay from "razorpay";
 import Booking from "../models/Booking.js";
 import Worker from "../models/Worker.js";
 import WorkerProfile from "../models/WorkerProfile.js";
+import User from "../models/User.js";
 import { getIO, notifyPaymentSecured } from "../sockets/bookingSocket.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -269,8 +270,15 @@ export const releasePayout = asyncHandler(async (req, res) => {
       { $inc: { jobsCompleted: 1 } }
     ).catch(() => {});
 
-    await Worker.findByIdAndUpdate(
-      booking.workerId,
+    // booking.workerId references User, not the KYC Worker document
+    const workerUser = await User.findById(booking.workerId).catch(() => null);
+    await Worker.findOneAndUpdate(
+      {
+        $or: [
+          ...(workerUser?.phone ? [{ phone: workerUser.phone }] : []),
+          { _id: booking.workerId },
+        ],
+      },
       { $inc: { walletBalance: workerPayoutAmount } }
     ).catch(() => {});
   }
@@ -452,5 +460,62 @@ export const withdrawWalletBalance = asyncHandler(async (req, res) => {
     },
     message: `₹${withdrawAmount} successfully transferred to registered bank account via Jan Dhan UPI.`,
   });
+});
+
+/**
+ * Razorpay webhook: payment.captured / payment.failed.
+ * Requires RAZORPAY_WEBHOOK_SECRET. Does not credit worker payouts — escrow
+ * release still happens on job completion via releasePayout.
+ */
+export const handleRazorpayWebhook = asyncHandler(async (req, res) => {
+  const webhookSecret = process.env.RAZORPAY_WEBHOOK_SECRET;
+  if (!webhookSecret) {
+    return res.status(503).json({
+      success: false,
+      message: "Razorpay webhooks are not configured (RAZORPAY_WEBHOOK_SECRET missing).",
+    });
+  }
+
+  const signature = req.headers["x-razorpay-signature"];
+  const body = typeof req.body === "string" ? req.body : JSON.stringify(req.body || {});
+  const expected = crypto.createHmac("sha256", webhookSecret).update(body).digest("hex");
+  if (!signature || expected !== signature) {
+    throw new ApiError(400, "Invalid Razorpay webhook signature.");
+  }
+
+  const event = typeof req.body === "string" ? JSON.parse(req.body) : req.body;
+  const paymentEntity = event?.payload?.payment?.entity;
+  const orderId = paymentEntity?.order_id;
+  const paymentId = paymentEntity?.id;
+  const eventName = event?.event;
+
+  if (orderId && eventName === "payment.captured") {
+    const booking = await Booking.findOne({
+      $or: [{ razorpayOrderId: orderId }, { paymentOrderId: orderId }],
+    });
+    if (booking && booking.paymentStatus !== "held_in_escrow" && booking.paymentStatus !== "released") {
+      booking.paymentStatus = "held_in_escrow";
+      booking.razorpayPaymentId = paymentId;
+      booking.paymentId = paymentId;
+      await booking.save();
+      try {
+        notifyPaymentSecured(booking);
+      } catch (socketErr) {
+        console.warn("[Webhook] notifyPaymentSecured:", socketErr.message);
+      }
+    }
+  }
+
+  if (orderId && eventName === "payment.failed") {
+    const booking = await Booking.findOne({
+      $or: [{ razorpayOrderId: orderId }, { paymentOrderId: orderId }],
+    });
+    if (booking && booking.paymentStatus === "unpaid") {
+      booking.paymentStatus = "failed";
+      await booking.save();
+    }
+  }
+
+  return res.status(200).json({ success: true });
 });
 

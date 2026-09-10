@@ -1,7 +1,8 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import WorkerRadarMap from "../Map/WorkerRadarMap";
 import { showToast } from "../../toast";
+import { getWorkers } from "../../api";
 import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function StitchHome({ onNavigate }) {
@@ -158,8 +159,43 @@ export default function StitchHome({ onNavigate }) {
     },
   ];
 
-  // Alias for backward-compatibility with radar/map references
-  const radarWorkers = ncrWorkers;
+  const [liveWorkers, setLiveWorkers] = useState([]);
+
+  useEffect(() => {
+    getWorkers("", { lat: 28.6139, lng: 77.209 }, false)
+      .then((res) => {
+        const rows = Array.isArray(res?.data) ? res.data : [];
+        const mapped = rows
+          .map((p) => {
+            const coords = p.location?.coordinates;
+            const lat = p.lat ?? (Array.isArray(coords) ? coords[1] : null);
+            const lng = p.lng ?? (Array.isArray(coords) ? coords[0] : null);
+            if (lat == null || lng == null) return null;
+            return {
+              id: String(p._id || p.userId?._id),
+              name: p.userId?.name || "Verified Cooperative Worker",
+              role: p.skills?.join(" • ") || "Cooperative Tradesperson",
+              craft: p.skills?.[0] || "trade",
+              rating: Number(p.ratingAvg || 0).toFixed(2),
+              jobs: `${p.jobsCompleted || 0} jobs completed`,
+              rate: "₹300",
+              mapRate: "₹300",
+              rateUnit: "/hr",
+              distance: p.distanceText || `${p.distanceKm ?? ""} km`,
+              area: p.userId?.location?.area || "Delhi NCR",
+              city: "Delhi NCR",
+              lat,
+              lng,
+              image: p.photoUrl || (p.sakhiVerified || p.isSakhiVerified ? DEFAULT_FEMALE_AVATAR : DEFAULT_MALE_AVATAR),
+            };
+          })
+          .filter(Boolean);
+        if (mapped.length) setLiveWorkers(mapped);
+      })
+      .catch(() => {});
+  }, []);
+
+  const radarWorkers = liveWorkers.length > 0 ? liveWorkers : ncrWorkers;
 
   const [selectedWorker, setSelectedWorker] = useState(ncrWorkers[0]);
 
@@ -447,7 +483,7 @@ export default function StitchHome({ onNavigate }) {
           {/* RIGHT PANE: REAL-TIME NCR INTERACTIVE MAP */}
           <div className="lg:col-span-6 h-full min-h-[460px] sm:min-h-[540px] lg:min-h-[640px] flex flex-col">
             <WorkerRadarMap
-              workers={ncrWorkers}
+              workers={radarWorkers}
               selectedWorker={selectedWorker}
               onSelectWorker={setSelectedWorker}
               onNavigate={onNavigate}

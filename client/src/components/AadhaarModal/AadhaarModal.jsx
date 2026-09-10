@@ -99,44 +99,41 @@ export default function AadhaarModal({ phone: initialPhone, onClose, onVerified 
       return;
     }
 
-    // 3. Try real backend extraction if available, otherwise apply realistic clean demo data
     try {
-      if (aadhaarFile) {
-        const fd = new FormData();
-        fd.append("aadhaarCard", aadhaarFile);
-        fd.append("phone", phone);
-        
-        try {
-          const res = await extractAadhaar(fd);
-          if (res?.success && res?.data) {
-            setAadhaarUrl(res.data.aadhaarCardImageUrl || "");
-            const cleanName = res.data.name?.replace(/[^\w\s]/gi, "").trim();
-            setExtractedData({
-              name: cleanName && cleanName.length > 2 ? cleanName : "Ramesh Kumar",
-              dob: res.data.dob || "14/08/1986",
-              address: res.data.address || "Flat 402, Shivalik Apts, Sector 62, Noida, UP - 201309",
-              aadhaarNumberMasked: "XXXX - XXXX - 4821",
-              gender: res.data.gender || "Male",
-            });
-            setStep(2);
-            return;
-          }
-        } catch (apiErr) {
-          console.warn("[OCR API] Using high-accuracy demo fallback:", apiErr.message);
-        }
+      let fileToSend = aadhaarFile;
+      if (!fileToSend && aadhaarPreview?.startsWith("data:")) {
+        const blob = await fetch(aadhaarPreview).then((r) => r.blob());
+        fileToSend = new File([blob], "aadhaar-capture.jpg", { type: blob.type || "image/jpeg" });
+      }
+      if (!fileToSend) {
+        setExtractionError("Upload or capture an Aadhaar image. Demo identity data is not accepted.");
+        return;
       }
 
-      // Clean realistic extracted state
+      const fd = new FormData();
+      fd.append("aadhaarCard", fileToSend);
+      fd.append("phone", phone);
+
+      const res = await extractAadhaar(fd);
+      if (!res?.success || !res?.data) {
+        setExtractionError("Aadhaar OCR did not return usable fields. Try a clearer, well-lit photo.");
+        return;
+      }
+
+      setAadhaarUrl(res.data.aadhaarCardImageUrl || "");
+      const cleanName = res.data.name?.replace(/[^\w\s]/gi, "").trim();
       setExtractedData({
-        name: "Ramesh Kumar",
-        dob: "14/08/1986",
-        address: "Flat 402, Shivalik Apts, Sector 62, Noida, UP - 201309",
-        aadhaarNumberMasked: "XXXX - XXXX - 4821",
-        gender: "Male",
+        name: cleanName && cleanName.length > 2 ? cleanName : (res.data.name || ""),
+        dob: res.data.dob || "",
+        address: res.data.address || "",
+        aadhaarNumberMasked: res.data.aadhaarNumberMasked || "•••• •••• ----",
+        gender: res.data.gender || "",
       });
       setStep(2);
     } catch (err) {
-      setExtractionError("Could not extract document fields. Please ensure the card is flat and well-lit.");
+      setExtractionError(
+        err.message || "Could not extract document fields. Please ensure the card is flat and well-lit."
+      );
     } finally {
       setIsExtracting(false);
     }
@@ -172,42 +169,36 @@ export default function AadhaarModal({ phone: initialPhone, onClose, onVerified 
     setIsVerifying(true);
 
     try {
-      let verificationRes = null;
-      try {
-        verificationRes = await verifyWorkerFace({
-          phone,
-          name: extractedData.name,
-          aadhaarNumberMasked: extractedData.aadhaarNumberMasked,
-          aadhaarCardImageUrl: aadhaarUrl,
-          selfieBase64: selfie,
-          dob: extractedData.dob,
-          address: extractedData.address,
-        });
-      } catch (err) {
-        console.warn("[Face Verify] Live verify simulated fallback:", err.message);
+      const verificationRes = await verifyWorkerFace({
+        phone,
+        name: extractedData.name,
+        aadhaarNumberMasked: extractedData.aadhaarNumberMasked,
+        aadhaarCardImageUrl: aadhaarUrl,
+        selfieBase64: selfie,
+        dob: extractedData.dob,
+        address: extractedData.address,
+      });
+
+      const score = verificationRes?.faceMatchScore ?? verificationRes?.data?.faceMatchScore;
+      const status = verificationRes?.verificationStatus || verificationRes?.data?.verificationStatus;
+      if (!verificationRes?.success && !status) {
+        throw new Error(verificationRes?.message || "Face verification did not complete.");
       }
 
-      const score = verificationRes?.faceMatchScore || 94;
-      const status = verificationRes?.verificationStatus || "auto_verified";
-
       setResult({
-        status,
-        score,
-        message: "Facial vector similarity confirmed. Identity verified under Cooperative Guild Standards.",
-        worker: verificationRes?.data || {
-          name: extractedData.name,
-          phone,
-          verificationStatus: "verified",
-          sakhiVerified: false,
-        },
+        status: status || "pending",
+        score: score ?? 0,
+        message: verificationRes?.message || "Identity check complete.",
+        worker: verificationRes?.data,
       });
 
       setStep(5);
-      if (status === "auto_verified" || status === "manually_verified") {
+      if (status === "auto_verified" || status === "manually_verified" || status === "verified") {
         if (onVerified) onVerified(verificationRes?.data || { name: extractedData.name, phone });
       }
     } catch (err) {
-      setResult({ status: "rejected", score: 42, message: err.message || "Face match score below threshold." });
+      setResult({ status: "rejected", score: 0, message: err.message || "Face match failed. SOS-style silent success is not allowed for KYC." });
+      showToast("Face verification failed: " + (err.message || "network or match error"));
       setStep(5);
     } finally {
       setIsVerifying(false);

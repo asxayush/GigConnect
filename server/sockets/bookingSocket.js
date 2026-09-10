@@ -1,4 +1,5 @@
 import { Server } from "socket.io";
+import mongoose from "mongoose";
 import Booking from "../models/Booking.js";
 import User from "../models/User.js";
 import EmergencyAlert from "../models/EmergencyAlert.js";
@@ -353,20 +354,23 @@ export const initBookingSocket = (httpServer) => {
       try {
         const { bookingId, userId, workerId, location, reason, metadata } = data || {};
         let geoPoint = { type: "Point", coordinates: [77.2090, 28.6139] };
-        if (location && Array.isArray(location.coordinates)) {
+        if (location && Array.isArray(location.coordinates) && location.coordinates.length === 2) {
           geoPoint = { type: "Point", coordinates: location.coordinates };
-        } else if (location && location.lat && location.lng) {
+        } else if (location && location.lat != null && location.lng != null) {
           geoPoint = { type: "Point", coordinates: [location.lng, location.lat] };
         }
 
+        const isValidObjectId = (id) =>
+          Boolean(id) && mongoose.Types.ObjectId.isValid(String(id));
+
         const alert = await EmergencyAlert.create({
-          bookingId: bookingId || undefined,
-          triggeredBy: userId || workerId,
-          userRole: workerId ? "worker" : "customer",
+          bookingId: isValidObjectId(bookingId) ? bookingId : undefined,
+          userId: isValidObjectId(userId) ? userId : undefined,
+          workerId: isValidObjectId(workerId) ? workerId : undefined,
           location: geoPoint,
           reason: reason || "RED ALERT: Emergency SOS Triggered",
           status: "active",
-          metadata: metadata || {},
+          notes: metadata ? JSON.stringify(metadata) : "",
         });
 
         const sosPayload = {
@@ -375,15 +379,20 @@ export const initBookingSocket = (httpServer) => {
           triggeredBy: userId || workerId,
           location: geoPoint,
           reason: alert.reason,
+          status: "active",
           timestamp: new Date().toISOString(),
         };
 
         ioInstance.to("admin_room").emit("emergency_sos_alert", sosPayload);
+        ioInstance.to("admin_room").emit("sos_alert_admin", sosPayload);
         if (bookingId) {
           ioInstance.to(`booking_${bookingId}`).emit("emergency_sos_alert", sosPayload);
+          ioInstance.to(`booking_${bookingId}`).emit("sos_status_update", sosPayload);
         }
+        socket.emit("sos_status_update", sosPayload);
       } catch (e) {
         console.error("[Socket] SOS Trigger Error:", e.message);
+        socket.emit("sos_error", { message: e.message || "Failed to persist SOS alert" });
       }
     });
 

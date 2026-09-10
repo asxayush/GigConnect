@@ -203,7 +203,7 @@ export default function ToolBankMap({ onNavigate }) {
         if (u.verificationStatus) return u.verificationStatus;
       } catch (e) {}
     }
-    return "verified"; // Default demo state
+    return "pending";
   });
 
   const isVerified = verificationStatus === "verified";
@@ -272,16 +272,7 @@ export default function ToolBankMap({ onNavigate }) {
         showToast(res?.message || "Tool reservation failed.");
       }
     } catch (e) {
-      // Fallback display if offline
-      setReservationSuccess({
-        reservationId: `TB-RES-${Date.now().toString().slice(-6)}`,
-        toolName: tool.name,
-        replacementValue: tool.replacementValue,
-        pickupHub: tool.hubName,
-        pickupAddress: tool.hubAddress,
-        validUntil: new Date(Date.now() + 24 * 3600 * 1000),
-      });
-      showToast(`✓ ${tool.name} reserved under Cooperative Mutual Trust!`);
+      showToast(e.message || "Tool reservation failed. The item was not booked.");
     } finally {
       setIsProcessing(false);
     }

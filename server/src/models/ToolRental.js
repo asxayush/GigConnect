@@ -26,6 +26,10 @@ const toolRentalSchema = new mongoose.Schema(
 );
 
 toolRentalSchema.index({ workerId: 1, status: 1 });
+toolRentalSchema.index(
+  { workerId: 1 },
+  { unique: true, partialFilterExpression: { status: "active" }, name: "one_active_rental_per_worker" }
+);
 toolRentalSchema.index({ toolId: 1, status: 1 });
 
 export default mongoose.models.ToolRental || mongoose.model("ToolRental", toolRentalSchema);

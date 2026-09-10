@@ -17,8 +17,18 @@ export async function recalculateWorkerSakhiStatus(workerUserId) {
         $group: {
           _id: "$workerId",
           avgRating: { $avg: "$stars" },
-          avgSafetyRating: { $avg: "$safetyRating" },
           count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const womenSafetyStats = await Rating.aggregate([
+      { $match: { workerId: workerUserId, isWomenSafetyAudit: true } },
+      {
+        $group: {
+          _id: "$workerId",
+          avgSafetyRating: { $avg: "$safetyRating" },
+          womenSafetyCount: { $sum: 1 },
           safetyPositiveCount: {
             $sum: {
               $cond: [{ $gte: ["$safetyRating", 4] }, 1, 0],
@@ -28,55 +38,67 @@ export async function recalculateWorkerSakhiStatus(workerUserId) {
       },
     ]);
 
-    const stat = stats[0] || {
-      avgRating: 4.85,
-      avgSafetyRating: 5.0,
-      count: 0,
+    const stat = stats[0] || { avgRating: 0, count: 0 };
+    const womenStat = womenSafetyStats[0] || {
+      avgSafetyRating: 0,
+      womenSafetyCount: 0,
       safetyPositiveCount: 0,
     };
 
-    const ratingAvg = Number(stat.avgRating.toFixed(2));
+    const ratingAvg = Number((stat.avgRating || 0).toFixed(2));
     const ratingCount = stat.count;
 
-    // Check worker gender to confirm female artisan
     const workerUser = await User.findById(workerUserId);
     const isFemale =
       workerUser?.gender?.toLowerCase() === "female" ||
       workerUser?.gender?.toLowerCase() === "f";
 
-    // Sakhi Trust Qualification Criteria:
-    // Must have at least 3 positive safety/comfort ratings (safetyRating >= 4) and an average safety rating >= 4.0
-    // OR pre-verified female cooperative master artisan
+    // Sakhi Trust: female worker + at least 3 women-authored safety ratings averaging >= 4.0
     const earnedSakhiBadge =
-      isFemale && stat.safetyPositiveCount >= 3 && stat.avgSafetyRating >= 4.0;
+      isFemale &&
+      womenStat.safetyPositiveCount >= 3 &&
+      womenStat.avgSafetyRating >= 4.0;
 
-    // Update WorkerProfile in MongoDB
+    const existingProfile = await WorkerProfile.findOne({
+      $or: [{ userId: workerUserId }, { _id: workerUserId }],
+    });
+
+    const sakhiFields = {};
+    if (earnedSakhiBadge) {
+      sakhiFields.isSakhiVerified = true;
+      sakhiFields.sakhiVerified = true;
+    } else if (womenStat.womenSafetyCount >= 3) {
+      sakhiFields.isSakhiVerified = false;
+      sakhiFields.sakhiVerified = false;
+    }
+
     const updatedProfile = await WorkerProfile.findOneAndUpdate(
       { $or: [{ userId: workerUserId }, { _id: workerUserId }] },
       {
         ratingAvg,
         ratingCount,
-        isSakhiVerified: earnedSakhiBadge,
-        sakhiVerified: earnedSakhiBadge,
+        ...sakhiFields,
       },
       { new: true }
     );
 
-    // Also update legacy Worker record if present
     await Worker.updateMany(
       { phone: workerUser?.phone },
       {
         rating: ratingAvg,
-        sakhiVerified: earnedSakhiBadge,
+        ...(sakhiFields.sakhiVerified !== undefined
+          ? { sakhiVerified: sakhiFields.sakhiVerified }
+          : {}),
       }
     );
 
     return {
       ratingAvg,
       ratingCount,
-      safetyPositiveCount: stat.safetyPositiveCount,
-      avgSafetyRating: Number(stat.avgSafetyRating.toFixed(2)),
-      isSakhiVerified: earnedSakhiBadge,
+      safetyPositiveCount: womenStat.safetyPositiveCount,
+      womenSafetyCount: womenStat.womenSafetyCount,
+      avgSafetyRating: Number((womenStat.avgSafetyRating || 0).toFixed(2)),
+      isSakhiVerified: earnedSakhiBadge || Boolean(existingProfile?.sakhiVerified || existingProfile?.isSakhiVerified),
       updatedProfile,
     };
   } catch (err) {

@@ -318,8 +318,8 @@ export default function FindHelp({ onNavigate }) {
               : rawSkill.includes("tech") || rawSkill.includes("app") || rawSkill.includes("ac") ? "technician"
               : "all";
 
-            const distanceText = p.distanceText || (p.distanceKm ? `${p.distanceKm} km away` : "Nearby (~2.5 km)");
-            const calculatedEta = p.calculatedEta || (p.etaMinutes ? `${p.etaMinutes} mins arrival` : "8 mins arrival");
+            const distanceText = p.distanceText || (p.distanceKm != null ? `${p.distanceKm} km away` : "Nearby");
+            const calculatedEta = p.calculatedEta || (p.etaMinutes ? `${p.etaMinutes} mins arrival` : null);
 
             return {
               id: p._id,
@@ -337,8 +337,10 @@ export default function FindHelp({ onNavigate }) {
               hourlyRate: 300,
               distanceText,
               calculatedEta,
-              distanceKm: p.distanceKm || 2.5,
-              sakhiVerified: Boolean(p.isSakhiVerified || p.sakhiVerified || p.userId?.gender?.toLowerCase() === "female"),
+              distanceKm: p.distanceKm ?? null,
+              lat: p.lat ?? (Array.isArray(p.location?.coordinates) ? p.location.coordinates[1] : null),
+              lng: p.lng ?? (Array.isArray(p.location?.coordinates) ? p.location.coordinates[0] : null),
+              sakhiVerified: Boolean(p.isSakhiVerified || p.sakhiVerified),
               area: p.userId?.location?.area || "Delhi NCR",
               image: p.photoUrl || (p.isSakhiVerified || p.sakhiVerified || p.userId?.gender?.toLowerCase() === "female" ? DEFAULT_FEMALE_AVATAR : DEFAULT_MALE_AVATAR),
             };
@@ -735,10 +737,10 @@ export default function FindHelp({ onNavigate }) {
                         <div className="mb-3 px-2.5 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200/80 text-emerald-800 text-xs font-semibold flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
                             <span className="material-symbols-outlined text-[15px] text-emerald-600">near_me</span>
-                            <span>{w.distanceText || "2.5 km away"}</span>
+                            <span>{w.distanceText || "Distance pending GPS"}</span>
                           </div>
                           <span className="font-bold text-emerald-900">
-                            ⏱ {w.calculatedEta || "8 mins"}
+                            ⏱ {w.calculatedEta || "ETA pending"}
                           </span>
                         </div>
 
