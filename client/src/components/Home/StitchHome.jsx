@@ -4,7 +4,7 @@ import { showToast } from "../../toast";
 import { getWorkers } from "../../api";
 import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
-export default function StitchHome({ onNavigate }) {
+export default function StitchHome({ onNavigate, user }) {
 
   // Delhi NCR Verified Workers Dataset (Realistic coordinates across Delhi, Gurugram, Noida, Faridabad, Ghaziabad)
   const ncrWorkers = [
@@ -240,12 +240,21 @@ export default function StitchHome({ onNavigate }) {
   ];
 
   const handleHireWorker = (worker) => {
-    onNavigate?.("booking", {
+    const bookingPayload = {
       name: worker.name,
       skills: [worker.role],
       price: worker.rate,
       prefilledDate: "Tomorrow, 09:30 AM",
-    });
+      worker,
+    };
+
+    if (!user) {
+      showToast("Please log in to hire a verified professional.");
+      onNavigate?.("auth", { returnToHire: bookingPayload });
+      return;
+    }
+
+    onNavigate?.("booking", bookingPayload);
   };
 
   return (

@@ -5,9 +5,10 @@ import "react-datepicker/dist/react-datepicker.css";
 import { motion, AnimatePresence } from "framer-motion";
 import { getWorkers } from "../../api";
 import VoiceAssistant from "../VoiceAssistant/VoiceAssistant";
+import { showToast } from "../../toast";
 import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
-export default function FindHelp({ onNavigate }) {
+export default function FindHelp({ onNavigate, user }) {
   const { t } = useTranslation();
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [sakhiMode, setSakhiMode] = useState(false);
@@ -373,7 +374,7 @@ export default function FindHelp({ onNavigate }) {
   }, [selectedCategory, sakhiMode, activeWorkerList]);
 
   const handleBook = (worker) => {
-    onNavigate?.("booking", {
+    const bookingPayload = {
       name: worker.name,
       userId: worker.userId || worker.id,
       skills: [worker.role],
@@ -384,7 +385,15 @@ export default function FindHelp({ onNavigate }) {
       avatar: worker.image,
       coopId: worker.credential,
       sakhiVerified: Boolean(worker.sakhiVerified),
-    });
+    };
+
+    if (!user) {
+      showToast("Please log in to hire a verified professional.");
+      onNavigate?.("auth", { returnToHire: bookingPayload });
+      return;
+    }
+
+    onNavigate?.("booking", bookingPayload);
   };
 
   const handleChat = (worker) => {

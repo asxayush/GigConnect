@@ -5,7 +5,7 @@ import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars
 import { createPaymentOrder, verifyPayment, getBookings } from "../../api";
 import { showToast } from "../../toast";
 
-export default function MyBookings({ onNavigate, selectedWorker }) {
+export default function MyBookings({ onNavigate, selectedWorker, user }) {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState("upcoming");
   const [searchQuery, setSearchQuery] = useState("");
@@ -343,6 +343,41 @@ export default function MyBookings({ onNavigate, selectedWorker }) {
     setShowBookingModal(false);
     setActiveTab("upcoming");
   };
+
+  if (!user) {
+    return (
+      <div className="w-full min-h-[75vh] flex items-center justify-center px-4 py-16 bg-slate-50/50 font-sans">
+        <div className="max-w-md w-full bg-white rounded-3xl border border-slate-200/80 shadow-sm p-8 text-center space-y-6">
+          <div className="w-16 h-16 rounded-2xl bg-[#0A2540]/10 text-[#0A2540] mx-auto flex items-center justify-center">
+            <span className="material-symbols-outlined text-3xl">lock</span>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-2xl font-bold text-[#0A2540] tracking-tight">Login Required</h2>
+            <p className="text-sm text-slate-500 leading-relaxed">
+              Please sign in or create an account to view your bookings, track live service orders, and hire verified cooperative tradespeople.
+            </p>
+          </div>
+          <div className="space-y-3 pt-2">
+            <button
+              type="button"
+              onClick={() => onNavigate("auth", selectedWorker ? { returnToHire: selectedWorker } : null)}
+              className="w-full py-3.5 bg-[#0A2540] hover:bg-[#071b30] text-white font-bold text-sm rounded-xl transition-all shadow-sm border-none cursor-pointer flex items-center justify-center gap-2"
+            >
+              <span>Sign In / Join GigConnect</span>
+              <span className="material-symbols-outlined text-base">login</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => onNavigate("home")}
+              className="w-full py-3 border border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold text-xs rounded-xl transition-all cursor-pointer bg-white"
+            >
+              Return to Homepage
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full bg-surface text-on-surface antialiased min-h-screen">

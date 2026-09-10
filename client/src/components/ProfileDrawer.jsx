@@ -16,7 +16,6 @@ export default function ProfileDrawer({
 }) {
   const { t } = useTranslation();
 
-  // If user object not passed, load from localStorage
   const activeUser = user || (() => {
     try {
       const saved = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user");
@@ -26,9 +25,13 @@ export default function ProfileDrawer({
     }
   })();
 
-  const userName = activeUser?.name || "Member Customer";
-  const userPhone = activeUser?.phone || "+91 98110 12345";
-  const userRole = activeUser?.role || "customer";
+  if (!activeUser) {
+    return null;
+  }
+
+  const userName = activeUser.name || "Member Customer";
+  const userPhone = activeUser.phone || "";
+  const userRole = activeUser.role || "customer";
   const avatarUrl = getAvatar(activeUser);
 
   const handleNav = (targetView) => {

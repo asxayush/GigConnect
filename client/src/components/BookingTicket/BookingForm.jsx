@@ -192,10 +192,12 @@ export default function BookingForm({ worker, prefilledDate, onCreated, onCancel
       .filter(Boolean)
       .join(" | ");
 
-    let token = localStorage.getItem("gigconnect_token");
-    if (!token) {
-      token = "demo-customer-token-" + Date.now();
-      localStorage.setItem("gigconnect_token", token);
+    let token = localStorage.getItem("gigconnect_token") || localStorage.getItem("gig_token");
+    const storedUser = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user");
+    if (!storedUser || !token) {
+      showToast("Please log in to finalize this booking request.");
+      setBusy(false);
+      return;
     }
 
     const payload = {

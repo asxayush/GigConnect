@@ -3,9 +3,11 @@ import { signInWithGoogle, getFirebaseIdToken } from "../../auth.js";
 import { loginWithFirebase, sendPhoneOtp, verifyPhoneOtp } from "../../api.js";
 import { showToast } from "../../toast.js";
 
-export default function SignUp({ onNavigate, setUser }) {
+export default function SignUp({ onNavigate, setUser, initialRecord }) {
+  const returnToHire = initialRecord?.returnToHire || null;
+
   // Step: "role" | "phone" | "otp"
-  const [step, setStep] = useState("role");
+  const [step, setStep] = useState(returnToHire ? "phone" : "role");
   // Role: "customer" | "worker"
   const [role, setRole] = useState("customer");
   
@@ -45,12 +47,43 @@ export default function SignUp({ onNavigate, setUser }) {
 
     showToast(`Welcome, ${authUser.name || "Member"}!`);
     if (onNavigate) {
-      if (authUser.role === "worker") {
+      if (returnToHire && authUser.role !== "worker") {
+        onNavigate("booking", returnToHire);
+      } else if (authUser.role === "worker") {
         onNavigate("worker-dashboard");
       } else {
         onNavigate("customer-dashboard");
       }
     }
+  };
+
+  const handleQuickDemoLogin = (targetRole) => {
+    const dummyUser =
+      targetRole === "worker"
+        ? {
+            id: "usr_worker_rajesh",
+            _id: "usr_worker_rajesh",
+            name: "Rajesh Kumar Sharma",
+            phone: "+91 98110 41022",
+            role: "worker",
+            craft: "plumbing",
+            skills: ["Plumbing & Sanitary", "Pipefitting", "Concealed Leakage"],
+            guildId: "Delhi Co-op Guild #4102",
+            isAadhaarVerified: true,
+            rating: 4.92,
+            jobsCompleted: 318,
+            walletBalance: 12450,
+          }
+        : {
+            id: "usr_customer_priyanka",
+            _id: "usr_customer_priyanka",
+            name: "Priyanka Sen",
+            phone: "+91 98765 11001",
+            role: "customer",
+            location: { area: "Connaught Place, New Delhi" },
+          };
+
+    commitAuthSuccess(dummyUser, `demo_token_${targetRole}_${Date.now()}`);
   };
 
   // 1. Google Sign-In with Firebase Client SDK
@@ -195,6 +228,21 @@ export default function SignUp({ onNavigate, setUser }) {
           </div>
         )}
 
+        {/* Return to Hire notice */}
+        {returnToHire && (
+          <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-start gap-3">
+            <span className="material-symbols-outlined text-amber-700 text-xl shrink-0 mt-0.5">info</span>
+            <div>
+              <p className="text-xs font-bold text-amber-900">
+                Sign in to hire {returnToHire.name}
+              </p>
+              <p className="text-[11px] text-amber-800/80 mt-0.5">
+                {returnToHire.trade || returnToHire.skills?.[0] || "Professional service"} • {returnToHire.price || "Fair Co-op Rate"}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* STEP 1: ROLE SELECTION */}
         {step === "role" && (
           <div className="space-y-4">
@@ -241,6 +289,38 @@ export default function SignUp({ onNavigate, setUser }) {
                 arrow_forward
               </span>
             </button>
+
+            {/* Quick Demo Switcher */}
+            <div className="mt-6 pt-5 border-t border-slate-100 space-y-2.5">
+              <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                <span>Instant 1-Click Demo Logins</span>
+                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">Evaluation Ready</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin("worker")}
+                  className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-900 text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <span className="material-symbols-outlined text-sm text-emerald-600">engineering</span>
+                    <span>Worker Pro</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700/80 mt-0.5 font-medium">Rajesh Kumar (Plumber)</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin("customer")}
+                  className="p-3 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 text-blue-900 text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1.5 font-extrabold text-xs">
+                    <span className="material-symbols-outlined text-sm text-blue-600">person</span>
+                    <span>Customer</span>
+                  </div>
+                  <p className="text-[10px] text-blue-700/80 mt-0.5 font-medium">Priyanka Sen</p>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
@@ -336,6 +416,38 @@ export default function SignUp({ onNavigate, setUser }) {
             >
               Change Role ({role === "customer" ? "Hiring" : "Joining as Pro"})
             </button>
+
+            {/* Quick Demo Switcher */}
+            <div className="mt-5 pt-4 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                <span>Instant 1-Click Demo Logins</span>
+                <span className="text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md font-bold">Fast Test</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin("worker")}
+                  className="p-2.5 rounded-xl border border-emerald-200 bg-emerald-50/50 hover:bg-emerald-100/60 text-emerald-900 text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1 font-extrabold text-xs">
+                    <span className="material-symbols-outlined text-sm text-emerald-600">engineering</span>
+                    <span>Worker Pro</span>
+                  </div>
+                  <p className="text-[10px] text-emerald-700/80 mt-0.5">Rajesh Kumar</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickDemoLogin("customer")}
+                  className="p-2.5 rounded-xl border border-blue-200 bg-blue-50/50 hover:bg-blue-100/60 text-blue-900 text-left transition-all cursor-pointer"
+                >
+                  <div className="flex items-center gap-1 font-extrabold text-xs">
+                    <span className="material-symbols-outlined text-sm text-blue-600">person</span>
+                    <span>Customer</span>
+                  </div>
+                  <p className="text-[10px] text-blue-700/80 mt-0.5">Priyanka Sen</p>
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

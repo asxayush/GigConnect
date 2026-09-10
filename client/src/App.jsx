@@ -113,25 +113,27 @@ function App() {
       <main className="flex-1 w-full flex flex-col">
         {view === "home" && (
           user?.role === "worker" ? (
-            <WorkerDashboard onNavigate={navigate} />
+            <WorkerDashboard onNavigate={navigate} user={user} />
           ) : (
-            <StitchHome onNavigate={navigate} />
+            <StitchHome onNavigate={navigate} user={user} />
           )
         )}
-        {view === "find-help" && <FindHelp onNavigate={navigate} />}
-        {view === "booking" && <MyBookings selectedWorker={selectedRecord} onNavigate={navigate} />}
-        {view === "active-booking" && <ActiveBooking booking={selectedRecord} onNavigate={navigate} />}
-        {view === "messages" && <Messages initialWorker={selectedRecord} onNavigate={navigate} />}
-        {view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} />}
-        {view === "register" && <RegisterWorker onNavigate={navigate} />}
-        {view === "admin" && <FederationDesk onNavigate={navigate} />}
-        {view === "tool-bank" && <ToolBankMap onNavigate={navigate} />}
-        {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}
-        {view === "worker-dashboard" && <WorkerDashboard onNavigate={navigate} />}
-        {view === "customer-dashboard" && <CustomerDashboard onNavigate={navigate} />}
-        {view === "dashboard" && (user?.role === "worker" ? <WorkerDashboard onNavigate={navigate} /> : <CustomerDashboard onNavigate={navigate} />)}
-        {view === "auth" && <SignUp onNavigate={navigate} setUser={setUser} />}
-        {view === "public-register" && <SignUp onNavigate={navigate} setUser={setUser} />}
+        {view === "find-help" && <FindHelp onNavigate={navigate} user={user} />}
+        {view === "booking" && (
+          <MyBookings selectedWorker={selectedRecord} onNavigate={navigate} user={user} />
+        )}
+        {view === "active-booking" && <ActiveBooking booking={selectedRecord} onNavigate={navigate} user={user} />}
+        {view === "messages" && <Messages initialWorker={selectedRecord} onNavigate={navigate} user={user} />}
+        {view === "detail" && <DetailView booking={selectedRecord} onNavigate={navigate} user={user} />}
+        {view === "register" && <RegisterWorker onNavigate={navigate} user={user} />}
+        {view === "admin" && <FederationDesk onNavigate={navigate} user={user} />}
+        {view === "tool-bank" && <ToolBankMap onNavigate={navigate} user={user} />}
+        {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} user={user} />}
+        {view === "worker-dashboard" && <WorkerDashboard onNavigate={navigate} user={user} />}
+        {view === "customer-dashboard" && <CustomerDashboard onNavigate={navigate} user={user} />}
+        {view === "dashboard" && (user?.role === "worker" ? <WorkerDashboard onNavigate={navigate} user={user} /> : <CustomerDashboard onNavigate={navigate} user={user} />)}
+        {view === "auth" && <SignUp onNavigate={navigate} setUser={setUser} initialRecord={selectedRecord} />}
+        {view === "public-register" && <SignUp onNavigate={navigate} setUser={setUser} initialRecord={selectedRecord} />}
       </main>
       
       {/* 24x7 Cooperative Sahayata FAB & AI Triage Chat Modal */}
