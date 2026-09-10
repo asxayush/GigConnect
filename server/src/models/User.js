@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema(
         avatar: { type: String, default: "" },
         gender: { type: String, default: "" },
         location: { lat: Number, lng: Number, area: String },
+        isDemo: { type: Boolean, default: false },
     },
     { timestamps: true }
 );

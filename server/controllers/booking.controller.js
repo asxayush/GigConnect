@@ -1,6 +1,7 @@
 import Booking from "../models/Booking.js";
 import WorkerProfile from "../models/WorkerProfile.js";
 import Notification from "../models/Notification.js";
+import User from "../models/User.js";
 import { getIO } from "../sockets/bookingSocket.js";
 import { ApiError } from "../utils/ApiError.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -38,8 +39,14 @@ export const createBooking = asyncHandler(async (req, res) => {
     }
   }
 
+  let effectiveCustomerId = req.user?._id || req.body.customerId;
+  if (!effectiveCustomerId) {
+    const demoCust = await User.findOne({ isDemo: true, role: "customer" });
+    effectiveCustomerId = demoCust?._id;
+  }
+
   const booking = await Booking.create({
-    customerId: req.user._id,
+    customerId: effectiveCustomerId,
     workerId: workerId || undefined,
     serviceCategory,
     address,
@@ -48,10 +55,13 @@ export const createBooking = asyncHandler(async (req, res) => {
     isEmergency: Boolean(isEmergency),
     price: price || 0,
     specialRequest: specialRequest || undefined,
-    status: workerId ? "Assigned" : "pending",
+    status: "pending",
+    requestStatus: "pending",
+    arrivalTime: "15 mins",
+    isDemo: Boolean(req.body.isDemo ?? req.user?.isDemo ?? true),
   });
 
-  const populatedBooking = await booking.populate("customerId", "name phone");
+  const populatedBooking = await booking.populate("customerId", "name phone avatar");
 
   let io;
   try {
@@ -61,9 +71,14 @@ export const createBooking = asyncHandler(async (req, res) => {
   }
 
   if (workerId) {
-    // 1. Direct assignment
+    // 1. Direct assignment: emit to workerId and worker_workerId rooms
     if (io) {
+      io.to(`worker_${workerId}`).emit("new-booking", populatedBooking);
+      io.to(String(workerId)).emit("new-booking", populatedBooking);
       io.to(`worker_${workerId}`).emit("newBookingRequest", populatedBooking);
+      io.to(String(workerId)).emit("newBookingRequest", populatedBooking);
+      io.to(`worker_${workerId}`).emit("new_booking_request", populatedBooking);
+      io.to(String(workerId)).emit("new_booking_request", populatedBooking);
     }
     await Notification.create({
       recipient: workerId,
@@ -86,6 +101,8 @@ export const createBooking = asyncHandler(async (req, res) => {
     // Emit live socket event to active matching worker rooms
     if (io && workerUserIds.length > 0) {
       workerUserIds.forEach((id) => {
+        io.to(`worker_${id}`).emit("new-booking", populatedBooking);
+        io.to(String(id)).emit("new-booking", populatedBooking);
         io.to(`worker_${id}`).emit("newBookingRequest", populatedBooking);
       });
     }
@@ -100,7 +117,6 @@ export const createBooking = asyncHandler(async (req, res) => {
         message: `New booking available at ${address} for ₹${booking.price || "Standard Rate"}.`,
         data: {
           bookingId: booking._id,
-          serviceCategory,
           price: booking.price,
           scheduledAt,
         },
@@ -123,24 +139,26 @@ export const createBooking = asyncHandler(async (req, res) => {
  */
 export const acceptBooking = asyncHandler(async (req, res) => {
   const bookingId = req.params.id;
-  const workerUserId = req.user._id;
+  const workerUserId = req.user?._id;
 
-  // Atomic race-safe condition: ONLY updates if status is still strictly 'pending'
+  // Accept booking if pending or requested
   const booking = await Booking.findOneAndUpdate(
-    { _id: bookingId, status: "pending" },
+    { _id: bookingId, status: { $in: ["pending", "requested", "Assigned"] } },
     {
       $set: {
-        status: "Assigned",
-        workerId: workerUserId,
+        status: "accepted",
+        requestStatus: "accepted",
+        arrivalTime: req.body.arrivalTime || "15 mins",
+        ...(workerUserId ? { workerId: workerUserId } : {}),
       },
     },
     { new: true, runValidators: true }
-  ).populate("customerId workerId", "name phone");
+  ).populate("customerId workerId", "name phone avatar");
 
   if (!booking) {
     throw new ApiError(
       409,
-      "Job no longer available. Another worker has already accepted this booking or it was cancelled."
+      "Job no longer available or has already been accepted/cancelled."
     );
   }
 
@@ -152,30 +170,37 @@ export const acceptBooking = asyncHandler(async (req, res) => {
   }
 
   if (io) {
-    // Notify the customer in real-time
-    io.to(`user_${booking.customerId._id}`).emit("bookingConfirmed", {
-      bookingId: booking._id,
-      status: "Assigned",
-      worker: {
-        id: req.user._id,
-        name: req.user.name,
-        phone: req.user.phone,
-      },
-    });
+    const custId = booking.customerId?._id || booking.customerId;
+    const workerName = booking.workerId?.name || "Rajesh Kumar";
+    const arrivalTime = booking.arrivalTime || "15 mins";
+    const acceptPayload = {
+      bookingId: String(booking._id),
+      booking,
+      status: "accepted",
+      requestStatus: "accepted",
+      arrivalTime,
+      workerName,
+      message: `Booking accepted — ${workerName} arriving in ${arrivalTime}.`,
+    };
 
-    // Notify other workers to remove this job from their available queue
+    io.to(String(custId)).emit("booking-accepted", acceptPayload);
+    io.to(`user_${custId}`).emit("booking-accepted", acceptPayload);
+    io.to(`booking_${booking._id}`).emit("booking-accepted", acceptPayload);
+    io.to(`user_${custId}`).emit("bookingConfirmed", acceptPayload);
+    io.to(String(custId)).emit("booking_accepted_pay_now", acceptPayload);
     io.emit("bookingTaken", { bookingId: booking._id });
   }
 
-  // Save notification for customer
-  await Notification.create({
-    recipient: booking.customerId._id,
-    sender: workerUserId,
-    type: "BOOKING_CONFIRMED",
-    title: "Worker Assigned!",
-    message: `${req.user.name} has accepted your ${booking.serviceCategory} booking.`,
-    data: { bookingId: booking._id, workerPhone: req.user.phone },
-  });
+  if (booking.customerId?._id && workerUserId) {
+    await Notification.create({
+      recipient: booking.customerId._id,
+      sender: workerUserId,
+      type: "BOOKING_CONFIRMED",
+      title: "Worker Assigned!",
+      message: `${req.user?.name || "Worker"} has accepted your ${booking.serviceCategory} booking and will arrive in ${booking.arrivalTime || "15 mins"}.`,
+      data: { bookingId: booking._id, arrivalTime: booking.arrivalTime || "15 mins" },
+    }).catch(() => {});
+  }
 
   res.status(200).json({
     success: true,
@@ -396,4 +421,144 @@ export const completeAndSettle = asyncHandler(async (req, res) => {
     data: populated,
   });
 });
+
+/**
+ * @desc Decline a booking request
+ * @route PATCH /api/bookings/:id/decline
+ * @access Private (Worker)
+ */
+export const declineBooking = asyncHandler(async (req, res) => {
+  const bookingId = req.params.id;
+  const booking = await Booking.findByIdAndUpdate(
+    bookingId,
+    {
+      $set: {
+        status: "declined",
+        requestStatus: "declined",
+      },
+    },
+    { new: true }
+  ).populate("customerId workerId", "name phone avatar");
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found.");
+  }
+
+  let io;
+  try {
+    io = getIO();
+  } catch (ioErr) {
+    console.warn("[Booking Controller] Socket.io not initialized:", ioErr.message);
+  }
+
+  if (io) {
+    const custId = booking.customerId?._id || booking.customerId;
+    const declinePayload = {
+      bookingId: String(booking._id),
+      booking,
+      status: "declined",
+      requestStatus: "declined",
+      message: "Booking declined by worker.",
+    };
+    io.to(String(custId)).emit("booking-declined", declinePayload);
+    io.to(`user_${custId}`).emit("booking-declined", declinePayload);
+    io.to(`booking_${booking._id}`).emit("booking-declined", declinePayload);
+    io.emit("bookingDeclined", declinePayload);
+  }
+
+  res.status(200).json({
+    success: true,
+    message: "Booking declined.",
+    data: booking,
+  });
+});
+
+/**
+ * @desc Get single booking by ID (used for live status polling)
+ * @route GET /api/bookings/:id
+ * @access Public / Private
+ */
+export const getBookingById = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id)
+    .populate("customerId", "name phone avatar email")
+    .populate("workerId", "name phone avatar");
+
+  if (!booking) {
+    throw new ApiError(404, "Booking not found.");
+  }
+
+  res.status(200).json({
+    success: true,
+    data: booking,
+  });
+});
+
+/**
+ * @desc Short-interval polling endpoint for worker pending requests
+ * @route GET /api/bookings/pending/:workerId
+ * @access Public / Private
+ */
+export const getPendingBookingsForWorker = asyncHandler(async (req, res) => {
+  const { workerId } = req.params;
+  const targetWorkerId = workerId || req.user?._id;
+
+  const workerProfile = await WorkerProfile.findOne({
+    $or: [{ userId: targetWorkerId }, { _id: targetWorkerId }]
+  });
+
+  const orConditions = [
+    { workerId: targetWorkerId },
+    { status: "pending", isDemo: true }
+  ];
+
+  if (workerProfile?.skills && workerProfile.skills.length > 0) {
+    orConditions.push({
+      serviceCategory: { $in: workerProfile.skills },
+      workerId: { $exists: false },
+      status: "pending",
+    });
+  }
+
+  const pendingBookings = await Booking.find({
+    status: "pending",
+    $or: orConditions,
+  })
+    .populate("customerId", "name phone avatar email")
+    .populate("workerId", "name phone avatar")
+    .sort({ createdAt: -1 });
+
+  res.status(200).json({
+    success: true,
+    count: pendingBookings.length,
+    data: pendingBookings,
+  });
+});
+
+/**
+ * @desc Get seeded demo accounts info for quick hackathon demo initialization
+ * @route GET /api/bookings/demo-info
+ * @access Public
+ */
+export const getDemoInfo = asyncHandler(async (_req, res) => {
+  const customer = await User.findOne({ isDemo: true, role: "customer" }).select(
+    "name phone email role avatar isDemo"
+  );
+  const workerUser = await User.findOne({ isDemo: true, role: "worker" }).select(
+    "name phone email role avatar isDemo"
+  );
+  let workerProfile = null;
+  if (workerUser) {
+    workerProfile = await WorkerProfile.findOne({ userId: workerUser._id });
+  }
+
+  res.status(200).json({
+    success: true,
+    data: {
+      customer,
+      workerUser,
+      workerProfile,
+    },
+  });
+});
+
 

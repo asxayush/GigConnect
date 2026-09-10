@@ -76,7 +76,7 @@ const bookingSchema = new mongoose.Schema(
     },
     requestStatus: {
       type: String,
-      enum: ["pending", "accepted", "rejected", "completed"],
+      enum: ["pending", "accepted", "rejected", "declined", "completed"],
       default: "pending",
       index: true,
     },
@@ -93,11 +93,21 @@ const bookingSchema = new mongoose.Schema(
         "completed",
         "Completed",
         "rejected",
+        "declined",
         "cancelled",
         "Cancelled",
         "escrow-settled",
       ],
       default: "pending",
+    },
+    arrivalTime: {
+      type: String,
+      default: "15 mins",
+    },
+    isDemo: {
+      type: Boolean,
+      default: false,
+      index: true,
     },
     paymentStatus: {
       type: String,
@@ -294,7 +304,9 @@ bookingSchema.pre("save", function (next) {
     platformFee: 0,
   };
 
-  next();
+  if (typeof next === "function") {
+    next();
+  }
 });
 
 bookingSchema.index({ customerId: 1, requestStatus: 1 });

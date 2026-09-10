@@ -82,3 +82,11 @@ export const getToolInventory = () => apiRequest("/api/toolbank/inventory");
 export const rentToolItem = (toolId, token) => apiRequest("/api/toolbank/rent", { method: "POST", body: JSON.stringify({ toolId }), headers: { Authorization: `Bearer ${token}` } });
 export const returnToolItem = (rentalId, token) => apiRequest("/api/toolbank/return", { method: "POST", body: JSON.stringify({ rentalId }), headers: { Authorization: `Bearer ${token}` } });
 export const getMyToolRentals = (token) => apiRequest("/api/toolbank/my-rentals", { headers: { Authorization: `Bearer ${token}` } });
+
+// Live Demo Booking APIs
+export const getPendingBookingsForWorker = (workerId, token) => apiRequest(`/api/bookings/pending/${workerId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+export const acceptBookingRequest = (bookingId, token, arrivalTime = "15 mins") => apiRequest(`/api/bookings/${bookingId}/accept`, { method: "PATCH", body: JSON.stringify({ arrivalTime }), headers: token ? { Authorization: `Bearer ${token}` } : {} });
+export const declineBookingRequest = (bookingId, token) => apiRequest(`/api/bookings/${bookingId}/decline`, { method: "PATCH", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+export const getBookingById = (bookingId, token) => apiRequest(`/api/bookings/${bookingId}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
+export const getDemoData = () => apiRequest("/api/bookings/demo-info");
+

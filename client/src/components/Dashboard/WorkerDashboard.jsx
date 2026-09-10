@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import axios from "axios";
+import { io } from "socket.io-client";
 import { showToast } from "../../toast";
 import { DEFAULT_MALE_AVATAR } from "../../assets/avatars";
+import {
+  API_URL,
+  getPendingBookingsForWorker,
+  acceptBookingRequest,
+  declineBookingRequest,
+} from "../../api";
 
 export default function WorkerDashboard({ onNavigate, user: propUser }) {
-  // Current worker session
+  // Current worker session (Seeded Rajesh Kumar ID)
   const workerUser =
     propUser ||
     (() => {
@@ -15,14 +22,22 @@ export default function WorkerDashboard({ onNavigate, user: propUser }) {
         return null;
       }
     })() || {
-      id: "usr_worker_rajesh",
-      name: "Rajesh Kumar Sharma",
+      id: "6aa284a4d667617a99b8f0e8",
+      _id: "6aa284a4d667617a99b8f0e8",
+      name: "Rajesh Kumar",
       phone: "+91 98110 41022",
+      email: "plumber.demo@gigconnect.coop",
       role: "worker",
-      craft: "Plumbing & Sanitary",
+      craft: "Plumber",
+      category: "Plumber",
+      skills: ["Plumber", "Plumbing & Sanitary"],
       guildId: "Delhi Co-op Guild #4102",
-      rating: 4.92,
+      rating: 4.9,
+      experienceYears: 8,
+      trustBadge: "Sahakari Bhai Trust ✓",
+      typicalArrivalTime: "15 mins",
       jobsCompleted: 318,
+      isDemo: true,
     };
 
   // Dashboard Tab state: "jobs" | "payouts" | "toolbank"
@@ -156,19 +171,101 @@ export default function WorkerDashboard({ onNavigate, user: propUser }) {
     },
   ]);
 
-  // Incoming Direct Requests Queue
-  const [incomingRequests, setIncomingRequests] = useState([
-    {
-      id: "dir_job_101",
-      customerName: "Priyanka Sen",
-      serviceCategory: "Emergency Pipe Leakage",
-      location: "Flat 402, Connaught Place, New Delhi",
-      distance: "1.2 km away",
-      payout: "₹650",
-      urgency: "Urgent (Water Valve Shut)",
-      timestamp: "2 mins ago",
-    },
-  ]);
+  // Incoming Direct Requests Queue (Real-Time from Socket.io & Short Polling)
+  const [incomingRequests, setIncomingRequests] = useState([]);
+  const socketRef = useRef(null);
+
+  const effectiveWorkerId = workerUser._id || workerUser.id || "6aa284a4d667617a99b8f0e8";
+
+  // 1. Socket.io Listener for Real-Time Dispatch Alerts
+  useEffect(() => {
+    const socket = io(API_URL, {
+      transports: ["websocket", "polling"],
+      reconnectionAttempts: 5,
+    });
+    socketRef.current = socket;
+
+    socket.on("connect", () => {
+      socket.emit("joinWorker", { workerId: effectiveWorkerId, userId: effectiveWorkerId });
+    });
+
+    const handleIncomingBooking = (b) => {
+      if (!b) return;
+      const bId = b._id || b.id;
+      const formatted = {
+        id: bId,
+        bookingId: bId,
+        customerName: b.customerId?.name || "Ayush Sharma (Demo Customer)",
+        customerPhone: b.customerId?.phone || "+91 98765 43210",
+        serviceCategory: b.serviceCategory || "Plumber",
+        location: b.address || "Flat 402, Connaught Place, New Delhi",
+        distance: "1.2 km away",
+        payout: `₹${Math.round(Number(b.price || 499) * 0.95)}`,
+        grossPrice: `₹${b.price || 499}`,
+        urgency: "Immediate Arrival Requested",
+        timestamp: "Just now",
+        isDemo: Boolean(b.isDemo),
+        arrivalTime: b.arrivalTime || "15 mins",
+      };
+
+      setIncomingRequests((prev) => {
+        if (prev.some((item) => (item.bookingId || item.id) === bId)) return prev;
+        return [formatted, ...prev];
+      });
+
+      showToast(`⚡ New booking request from ${formatted.customerName}!`);
+    };
+
+    socket.on("new-booking", handleIncomingBooking);
+    socket.on("newBookingRequest", handleIncomingBooking);
+    socket.on("new_booking_request", handleIncomingBooking);
+
+    return () => {
+      socket.off("new-booking", handleIncomingBooking);
+      socket.off("newBookingRequest", handleIncomingBooking);
+      socket.off("new_booking_request", handleIncomingBooking);
+      socket.disconnect();
+    };
+  }, [effectiveWorkerId]);
+
+  // 2. Short-Interval Polling (every 2.5 seconds) Fallback
+  useEffect(() => {
+    const fetchPending = async () => {
+      try {
+        const token = localStorage.getItem("gig_token") || localStorage.getItem("gigconnect_token");
+        const res = await getPendingBookingsForWorker(effectiveWorkerId, token);
+        const list = res?.data || [];
+        
+        const formattedList = list.map((b) => ({
+          id: b._id || b.id,
+          bookingId: b._id || b.id,
+          customerName: b.customerId?.name || "Ayush Sharma (Demo Customer)",
+          customerPhone: b.customerId?.phone || "+91 98765 43210",
+          serviceCategory: b.serviceCategory || "Plumber",
+          location: b.address || "Flat 402, Connaught Place, New Delhi",
+          distance: "1.2 km away",
+          payout: `₹${Math.round(Number(b.price || 499) * 0.95)}`,
+          grossPrice: `₹${b.price || 499}`,
+          urgency: "Immediate Arrival Requested",
+          timestamp: "Just now",
+          isDemo: Boolean(b.isDemo),
+          arrivalTime: b.arrivalTime || "15 mins",
+        }));
+
+        setIncomingRequests((prev) => {
+          const map = new Map();
+          formattedList.forEach((item) => map.set(item.id, item));
+          return Array.from(map.values());
+        });
+      } catch (err) {
+        // Polling gracefully ignores transient network hiccups
+      }
+    };
+
+    fetchPending();
+    const interval = setInterval(fetchPending, 2500);
+    return () => clearInterval(interval);
+  }, [effectiveWorkerId]);
 
   // Active Ongoing Job State
   const [activeJob, setActiveJob] = useState(null);
@@ -362,23 +459,27 @@ export default function WorkerDashboard({ onNavigate, user: propUser }) {
   };
 
   // Handle Accepting a Direct or Recommended Job
-  const handleAcceptJob = (job) => {
-    const isDirect = Boolean(incomingRequests.find((j) => j.id === job.id));
-    if (isDirect) {
-      setIncomingRequests((prev) => prev.filter((j) => j.id !== job.id));
-    } else {
-      setJobRecommendations((prev) => prev.filter((j) => j.id !== job.id));
+  const handleAcceptJob = async (job) => {
+    const bookingId = job.bookingId || job.id;
+    try {
+      const token = localStorage.getItem("gig_token") || localStorage.getItem("gigconnect_token");
+      await acceptBookingRequest(bookingId, token, job.arrivalTime || "15 mins");
+    } catch (err) {
+      console.warn("API accept error (continuing UI transition):", err.message);
     }
 
+    setIncomingRequests((prev) => prev.filter((j) => (j.bookingId || j.id) !== bookingId));
+    setJobRecommendations((prev) => prev.filter((j) => (j.bookingId || j.id) !== bookingId));
+
     const activeItem = {
-      id: job.id,
+      id: bookingId,
       customerName: job.customerName,
-      serviceCategory: job.serviceCategory || job.jobType || "General Maintenance",
-      location: job.location,
+      serviceCategory: job.serviceCategory || job.jobType || "Plumber",
+      location: job.location || "Flat 402, Connaught Place, New Delhi",
       distance: job.distance || "1.2 km away",
-      payout: job.workerPayout || job.payout || "₹600",
+      payout: job.workerPayout || job.payout || "₹474",
       status: "En Route to Site",
-      customerPhone: "+91 98765 21094",
+      customerPhone: job.customerPhone || "+91 98765 43210",
       handshakeOtp: "4829",
       startedAt: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
@@ -386,12 +487,19 @@ export default function WorkerDashboard({ onNavigate, user: propUser }) {
     setActiveJob(activeItem);
     setIsOtpVerified(false);
     setOtpInput("");
-    showToast(`Accepted job from ${job.customerName}! Navigating to active dispatch.`);
+    showToast(`Accepted job from ${job.customerName}! Customer notified of 15 min arrival.`);
   };
 
-  const handleDeclineJob = (jobId) => {
-    setIncomingRequests((prev) => prev.filter((j) => j.id !== jobId));
-    setJobRecommendations((prev) => prev.filter((j) => j.id !== jobId));
+  const handleDeclineJob = async (jobId) => {
+    try {
+      const token = localStorage.getItem("gig_token") || localStorage.getItem("gigconnect_token");
+      await declineBookingRequest(jobId, token);
+    } catch (err) {
+      console.warn("API decline error (continuing UI transition):", err.message);
+    }
+
+    setIncomingRequests((prev) => prev.filter((j) => (j.bookingId || j.id) !== jobId));
+    setJobRecommendations((prev) => prev.filter((j) => (j.bookingId || j.id) !== jobId));
     showToast("Request declined.");
   };
 

@@ -68,6 +68,7 @@ app.get("/", (_req, res) => res.json({ success: true, message: "GigConnect API &
 
 app.use("/api/auth", authRoutes);
 app.use("/api/bookings", bookingRoutes);
+app.use("/bookings", bookingRoutes);
 app.use("/api/workers", workerRoutes);
 app.use("/api/worker", workerVerificationRoutes);
 app.use("/api/admin", adminRoutes);

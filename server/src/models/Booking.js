@@ -78,10 +78,12 @@ const bookingSchema = new mongoose.Schema(
       enum: [
         "requested",
         "pending",
+        "accepted",
         "assigned",
         "in-progress",
         "completed",
         "escrow-settled",
+        "declined",
         "cancelled",
         "Requested",
         "Assigned",
@@ -90,6 +92,15 @@ const bookingSchema = new mongoose.Schema(
         "Cancelled",
       ],
       default: "requested",
+      index: true,
+    },
+    arrivalTime: {
+      type: String,
+      default: "15 mins",
+    },
+    isDemo: {
+      type: Boolean,
+      default: false,
       index: true,
     },
     isEmergency: {
