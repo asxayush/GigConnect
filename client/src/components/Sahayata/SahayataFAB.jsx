@@ -179,7 +179,7 @@ export default function SahayataFAB({ onNavigate }) {
           id: "ai_" + Date.now(),
           sender: "ai",
           text: data.reply || "Namaste! I am here to help you resolve any issues with your booking or payments.",
-          showEscalateButton: data.showEscalateButton !== false,
+          showEscalateButton: Boolean(data.showEscalateButton),
           category: cat,
           problemSummary: text,
           source: data.source || "gemini",

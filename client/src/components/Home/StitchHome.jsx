@@ -1,12 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { useTranslation } from "react-i18next";
+import { useState, useEffect } from "react";
 import WorkerRadarMap from "../Map/WorkerRadarMap";
 import { showToast } from "../../toast";
 import { getWorkers } from "../../api";
 import { DEFAULT_MALE_AVATAR, DEFAULT_FEMALE_AVATAR } from "../../assets/avatars";
 
 export default function StitchHome({ onNavigate }) {
-  const { t } = useTranslation();
 
   // Delhi NCR Verified Workers Dataset (Realistic coordinates across Delhi, Gurugram, Noida, Faridabad, Ghaziabad)
   const ncrWorkers = [
@@ -160,9 +158,10 @@ export default function StitchHome({ onNavigate }) {
   ];
 
   const [liveWorkers, setLiveWorkers] = useState([]);
+  const [sakhiMode, setSakhiMode] = useState(false);
 
   useEffect(() => {
-    getWorkers("", { lat: 28.6139, lng: 77.209 }, false)
+    getWorkers("", { lat: 28.6139, lng: 77.209 }, sakhiMode)
       .then((res) => {
         const rows = Array.isArray(res?.data) ? res.data : [];
         const mapped = rows
@@ -186,6 +185,7 @@ export default function StitchHome({ onNavigate }) {
               city: "Delhi NCR",
               lat,
               lng,
+              sakhiVerified: p.sakhiVerified || p.isSakhiVerified || false,
               image: p.photoUrl || (p.sakhiVerified || p.isSakhiVerified ? DEFAULT_FEMALE_AVATAR : DEFAULT_MALE_AVATAR),
             };
           })
@@ -193,7 +193,7 @@ export default function StitchHome({ onNavigate }) {
         if (mapped.length) setLiveWorkers(mapped);
       })
       .catch(() => {});
-  }, []);
+  }, [sakhiMode]);
 
   const radarWorkers = liveWorkers.length > 0 ? liveWorkers : ncrWorkers;
 
@@ -265,6 +265,19 @@ export default function StitchHome({ onNavigate }) {
                       Live Delhi NCR Cooperative Network
                     </span>
                   </div>
+                  {/* Sakhi Trust Mode Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setSakhiMode(!sakhiMode)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold border transition-all cursor-pointer mb-2 ${
+                      sakhiMode
+                        ? "bg-pink-50 text-pink-700 border-pink-300"
+                        : "bg-white text-slate-500 border-slate-200 hover:border-pink-300"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-[13px]">favorite</span>
+                    <span>{sakhiMode ? "Sakhi Trust Mode: ON" : "Sakhi Trust Mode"}</span>
+                  </button>
                   <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-primary leading-[1.12] tracking-tight font-headline-lg">
                     Let’s Find Your <br />
                     <span className="text-secondary-container">Perfect Match</span>

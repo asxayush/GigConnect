@@ -52,16 +52,19 @@ export const createEscrowOrder = asyncHandler(async (req, res) => {
     throw new ApiError(404, "Booking record not found.");
   }
 
-  // Strict Rule: Worker MUST accept the request before customer can pay into escrow
-  const isAccepted =
+  // Pre-paid Escrow Rule: Booking can be pre-paid in pending, accepted, or assigned state
+  const isPayableState =
     booking.requestStatus === "accepted" ||
     booking.status === "accepted" ||
-    booking.status === "assigned";
+    booking.status === "assigned" ||
+    booking.requestStatus === "pending" ||
+    booking.status === "pending" ||
+    booking.status === "requested";
 
-  if (!isAccepted) {
+  if (!isPayableState) {
     return res.status(400).json({
       success: false,
-      message: "Worker must accept the booking before escrow order can be generated.",
+      message: "Booking is not in a payable state.",
       data: {
         bookingId: booking._id,
         currentRequestStatus: booking.requestStatus,

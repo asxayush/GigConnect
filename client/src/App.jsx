@@ -18,6 +18,7 @@ import ToolBankMap from "./views/ToolBankMap"
 import ActiveBooking from "./views/ActiveBooking"
 import RatingView from "./views/RatingView"
 import SahayataFAB from "./components/SahayataFAB"
+import SOSButton from "./components/SOSButton"
 import Toast from "./components/Toast/Toast"
 import { showToast } from "./toast"
 import { auth } from "./auth"
@@ -34,7 +35,7 @@ function App() {
     try {
       const saved = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user")
       return saved ? JSON.parse(saved) : null
-    } catch (e) {
+    } catch {
       return null
     }
   })
@@ -51,7 +52,7 @@ function App() {
       try {
         const saved = localStorage.getItem("gigconnect_user") || localStorage.getItem("gig_user")
         setUser(saved ? JSON.parse(saved) : null)
-      } catch (e) {
+      } catch {
         setUser(null)
       }
     }
@@ -81,7 +82,9 @@ function App() {
     
     try {
       auth?.signOut().catch(() => {})
-    } catch (e) {}
+    } catch {
+      // Ignore sign-out errors
+    }
 
     setUser(null)
     window.dispatchEvent(new Event("gigconnect_auth_change"))
@@ -108,7 +111,13 @@ function App() {
         onLogout={handleLogout}
       />
       <main className="flex-1 w-full flex flex-col">
-        {view === "home" && <StitchHome onNavigate={navigate} />}
+        {view === "home" && (
+          user?.role === "worker" ? (
+            <WorkerDashboard onNavigate={navigate} />
+          ) : (
+            <StitchHome onNavigate={navigate} />
+          )
+        )}
         {view === "find-help" && <FindHelp onNavigate={navigate} />}
         {view === "booking" && <MyBookings selectedWorker={selectedRecord} onNavigate={navigate} />}
         {view === "active-booking" && <ActiveBooking booking={selectedRecord} onNavigate={navigate} />}
@@ -127,6 +136,9 @@ function App() {
       
       {/* 24x7 Cooperative Sahayata FAB & AI Triage Chat Modal */}
       <SahayataFAB onNavigate={navigate} />
+
+      {/* Emergency SOS Button - Always Available */}
+      {user && <SOSButton onNavigate={navigate} />}
 
       {view !== "messages" && <StitchFooter onNavigate={navigate} />}
     </div>

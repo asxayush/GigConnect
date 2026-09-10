@@ -76,7 +76,7 @@ export const checkPhoneVerification = async (phone, code) => {
         return { status: "approved" };
     }
 
-    // 3. Check with Twilio Verify service
+    // 3. Check with Twilio Verify service (REAL OTP only - no demo fallback)
     const client = getClient();
     if (client) {
         try {
@@ -86,16 +86,15 @@ export const checkPhoneVerification = async (phone, code) => {
                 memoryOtps.delete(formattedPhone);
                 return { status: "approved" };
             }
+            // If Twilio fails, do NOT fall back to demo OTP - deny access
+            return { status: "denied" };
         } catch (error) {
             console.warn("[Twilio Verify Check Note]:", error.message);
-            if (stored && stored.code === code) {
-                memoryOtps.delete(rawDigits);
-                memoryOtps.delete(formattedPhone);
-                return { status: "approved" };
-            }
+            // If Twilio fails, deny access - no demo OTP fallback
+            return { status: "denied" };
         }
     }
 
+    // If no Twilio client configured, deny access - no demo OTP
     return { status: "denied" };
 };
-

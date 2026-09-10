@@ -383,6 +383,7 @@ export default function FindHelp({ onNavigate }) {
       hourlyRate: worker.hourlyRate,
       avatar: worker.image,
       coopId: worker.credential,
+      sakhiVerified: Boolean(worker.sakhiVerified),
     });
   };
 
@@ -624,6 +625,21 @@ export default function FindHelp({ onNavigate }) {
           {/* Filter Chips & Voice Search */}
           <div className="flex items-center justify-between gap-4 mb-space-8 overflow-x-auto no-scrollbar pb-1">
             <div className="flex items-center gap-2">
+              {/* Sakhi Verified Quick Toggle Chip */}
+              <button
+                type="button"
+                onClick={() => setSakhiMode(!sakhiMode)}
+                className={`px-3.5 py-2 rounded-xl text-xs font-extrabold whitespace-nowrap transition-all border-none cursor-pointer flex-shrink-0 flex items-center gap-1.5 ${
+                  sakhiMode
+                    ? "bg-gradient-to-r from-pink-600 to-purple-600 text-white shadow-md ring-2 ring-pink-400/40"
+                    : "bg-pink-50 text-pink-700 hover:bg-pink-100 border border-pink-200"
+                }`}
+              >
+                <span>♀</span>
+                <span>Sakhi Verified Only</span>
+                {sakhiMode && <span className="text-[10px] ml-0.5">✓</span>}
+              </button>
+
               {categoryChips.map((chip) => (
                 <button
                   key={chip.id}

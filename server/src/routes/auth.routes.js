@@ -187,11 +187,11 @@ router.post("/phone/send", async (request, response, next) => {
       data: {
         phone,
         status: verification.status,
-        demoOtp: verification.demoCode,
+        isDeliveredViaTwilio: verification.isDeliveredViaTwilio,
       },
-      message: verification.demoCode
-        ? `OTP sent. (Demo code: ${verification.demoCode})`
-        : "OTP sent to your mobile",
+      message: verification.isDeliveredViaTwilio
+        ? "OTP sent to your mobile via SMS"
+        : "OTP generated. Please check your SMS.",
     });
   } catch (error) {
     next(error);
@@ -216,8 +216,7 @@ router.post("/phone/verify", async (request, response, next) => {
     if (verification.status !== "approved") {
       return response.status(401).json({
         success: false,
-        message:
-          "Incorrect or expired OTP. Use the code received or try 123456.",
+        message: "Incorrect or expired OTP. Please request a new code.",
       });
     }
     const rawDigits = phone.replace(/^\+91/, "");

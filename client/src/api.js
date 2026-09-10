@@ -59,8 +59,20 @@ export const submitRating = (data, token) => apiRequest("/api/ratings", { method
 export const registerWorker = (data, token) => apiRequest("/api/workers", { method: "POST", body: data, headers: { Authorization: `Bearer ${token}` } });
 export const updateMyWorkerProfile = (data, token) => apiRequest("/api/workers/me", { method: "PATCH", body: data, headers: { Authorization: `Bearer ${token}` } });
 export const updateCustomerProfile = (data, token) => apiRequest("/api/auth/profile", { method: "PATCH", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
-export const createPaymentOrder = (bookingId, token) => apiRequest("/api/payments/orders", { method: "POST", body: JSON.stringify({ bookingId }), headers: { Authorization: `Bearer ${token}` } });
-export const verifyPayment = (data, token) => apiRequest("/api/payments/verify", { method: "POST", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
+export const createPaymentOrder = (bookingId, amount, token) => {
+    let actualToken = token;
+    let actualAmount = amount;
+    if (typeof amount === "string" && !token && amount.length > 30) {
+        actualToken = amount;
+        actualAmount = undefined;
+    }
+    return apiRequest("/api/payments/orders", {
+        method: "POST",
+        body: JSON.stringify({ bookingId, amount: actualAmount }),
+        headers: actualToken ? { Authorization: `Bearer ${actualToken}` } : {},
+    });
+};
+export const verifyPayment = (data, token) => apiRequest("/api/payments/verify", { method: "POST", body: JSON.stringify(data), headers: token ? { Authorization: `Bearer ${token}` } : {} });
 export const verifyBookingOtp = (bookingId, otp, token) => apiRequest(`/api/bookings/${bookingId}/verify-otp`, { method: "PATCH", body: JSON.stringify({ otp }), headers: { Authorization: `Bearer ${token}` } });
 export const completeBooking = (bookingId, token) => apiRequest(`/api/bookings/${bookingId}/complete`, { method: "PATCH", headers: { Authorization: `Bearer ${token}` } });
 export const updateWorkerLiveLocation = (data, token) => apiRequest("/api/workers/location", { method: "PATCH", body: JSON.stringify(data), headers: { Authorization: `Bearer ${token}` } });
