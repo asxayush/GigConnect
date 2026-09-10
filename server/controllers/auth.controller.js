@@ -30,11 +30,8 @@ export const sendPhoneOtp = asyncHandler(async (req, res) => {
     data: {
       phone,
       status: verification.status,
-      demoOtp: verification.demoCode || "123456",
     },
-    message: verification.demoCode
-      ? `OTP sent. (Demo code: ${verification.demoCode})`
-      : "OTP sent to your mobile.",
+    message: "OTP sent securely to your mobile number.",
   });
 });
 
@@ -42,14 +39,15 @@ export const sendPhoneOtp = asyncHandler(async (req, res) => {
 export const verifyPhoneOtp = asyncHandler(async (req, res) => {
   const phone = req.body.phone?.replace(/[\s()-]/g, "");
   const code = req.body.code?.trim();
+  const selectedRole = req.body.role === "worker" ? "worker" : "customer";
 
   if (!/^\+[1-9]\d{7,14}$/.test(phone || "") || !/^\d{6}$/.test(code || "")) {
     throw new ApiError(400, "Enter a valid phone number and the 6-digit OTP code.");
   }
 
   const verification = await checkPhoneVerification(phone, code);
-  if (verification.status !== "approved" && code !== "123456") {
-    throw new ApiError(401, "Incorrect or expired OTP. Use the code received or test with 123456.");
+  if (verification.status !== "approved") {
+    throw new ApiError(401, "Incorrect or expired OTP. Please enter the valid code received on your phone.");
   }
 
   let user = await User.findOne({ phone });
@@ -58,7 +56,7 @@ export const verifyPhoneOtp = asyncHandler(async (req, res) => {
     user = await User.create({
       phone,
       name: `Member ${phone.slice(-4)}`,
-      role: "customer",
+      role: selectedRole,
     });
   }
 
@@ -85,6 +83,8 @@ export const verifyPhoneOtp = asyncHandler(async (req, res) => {
 // 3. Google Sign-In with Firebase ID Token Verification
 export const loginWithFirebase = asyncHandler(async (req, res) => {
   const token = req.headers.authorization?.replace(/^Bearer\s+/i, "");
+  const selectedRole = req.body.role === "worker" ? "worker" : "customer";
+
   if (!token) {
     throw new ApiError(401, "Firebase ID token is required in Authorization header.");
   }
@@ -98,7 +98,7 @@ export const loginWithFirebase = asyncHandler(async (req, res) => {
       name: identity.name || identity.phone_number || identity.email || "GigConnect member",
       email: identity.email,
       phone: identity.phone_number,
-      role: "customer",
+      role: selectedRole,
       avatar: identity.picture || "",
     });
   } else if (identity.picture && !user.avatar) {

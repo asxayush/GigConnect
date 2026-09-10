@@ -49,6 +49,11 @@ const workerSchema = new mongoose.Schema(
       type: Number,
       default: 250,
     },
+    walletBalance: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
     rating: {
       type: Number,
       default: 4.8,

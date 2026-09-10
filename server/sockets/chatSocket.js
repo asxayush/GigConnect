@@ -1,6 +1,7 @@
 import Message from "../models/Message.js";
 import Conversation from "../models/Conversation.js";
 import Booking from "../models/Booking.js";
+import { generateSmartReplies } from "../utils/geminiChat.js";
 
 /**
  * Socket.io Real-Time Messaging & Fair-Bid Handlers
@@ -59,6 +60,20 @@ export const registerChatHandlers = (io, socket) => {
     };
 
     io.to(`chat_${conversationId}`).emit("receive_message", payload);
+
+    // PART 4: GEMINI AI SMART CHAT AUTO-REPLY TRIGGER
+    const receiverRole = senderModel === "Worker" ? "customer" : "worker";
+    generateSmartReplies([], text.trim(), receiverRole)
+      .then((replies) => {
+        if (replies && replies.length) {
+          io.to(`chat_${conversationId}`).emit("smart_replies", {
+            conversationId,
+            replies,
+            forReceiverRole: receiverRole,
+          });
+        }
+      })
+      .catch((err) => console.warn("[Gemini Socket Warning]:", err.message));
   });
 
   // 3. Real-Time "Fair-Bid" Negotiation: send_bid

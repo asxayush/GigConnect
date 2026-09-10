@@ -12,6 +12,8 @@ import FederationDesk from "./components/FederationDesk/FederationDesk"
 import AdminDashboard from "./components/AdminDashboard/AdminDashboard"
 import SignUp from "./components/SignUp/SignUp"
 import Messages from "./components/Messages/Messages"
+import WorkerDashboard from "./components/Dashboard/WorkerDashboard"
+import CustomerDashboard from "./components/Dashboard/CustomerDashboard"
 import ToolBankMap from "./views/ToolBankMap"
 import ActiveBooking from "./views/ActiveBooking"
 import RatingView from "./views/RatingView"
@@ -116,6 +118,9 @@ function App() {
         {view === "admin" && <FederationDesk onNavigate={navigate} />}
         {view === "tool-bank" && <ToolBankMap onNavigate={navigate} />}
         {view === "rating" && <RatingView booking={selectedRecord} onNavigate={navigate} />}
+        {view === "worker-dashboard" && <WorkerDashboard onNavigate={navigate} />}
+        {view === "customer-dashboard" && <CustomerDashboard onNavigate={navigate} />}
+        {view === "dashboard" && (user?.role === "worker" ? <WorkerDashboard onNavigate={navigate} /> : <CustomerDashboard onNavigate={navigate} />)}
         {view === "auth" && <SignUp onNavigate={navigate} setUser={setUser} />}
         {view === "public-register" && <SignUp onNavigate={navigate} setUser={setUser} />}
       </main>

@@ -8,6 +8,8 @@ import adminRoutes from "./src/routes/admin.routes.js";
 import paymentRoutes from "./src/routes/payment.routes.js";
 import workerVerificationRoutes from "./src/routes/workerVerification.routes.js";
 import sosRoutes from "./src/routes/sos.routes.js";
+import toolRoutes from "./routes/tool.routes.js";
+import chatRoutes from "./routes/chatRoutes.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -73,6 +75,8 @@ app.use("/api/ratings", ratingRoutes);
 app.use("/api/sos", sosRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/tools", toolRoutes);
+app.use("/api/chat", chatRoutes);
 
 // 404 handler for unmatched routes
 app.use((_req, res) => {

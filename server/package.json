@@ -11,6 +11,7 @@
     "test:verification": "node test-verification.js"
   },
   "dependencies": {
+    "@google/genai": "^2.21.0",
     "@napi-rs/canvas": "^1.0.8",
     "@tensorflow/tfjs": "^4.22.0",
     "bcrypt": "^6.0.0",

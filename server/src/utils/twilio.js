@@ -37,7 +37,7 @@ export const sendPhoneVerification = async (phone) => {
             try {
                 const verification = await client.verify.v2.services(process.env.TWILIO_VERIFY_SERVICE_SID).verifications.create({ to: formattedPhone, channel: "sms" });
                 if (verification.status === "pending" || verification.status === "approved") {
-                    return { status: "pending", demoCode: generatedOtp, isDeliveredViaTwilio: true };
+                    return { status: "pending", isDeliveredViaTwilio: true };
                 }
             } catch (verifyErr) {
                 console.warn(`[Twilio Verify Notice] ${verifyErr.message}`);
@@ -48,33 +48,27 @@ export const sendPhoneVerification = async (phone) => {
         if (process.env.TWILIO_FROM_NUMBER) {
             try {
                 const message = await client.messages.create({
-                    body: `Your GigConnect security verification code is: ${generatedOtp}. Valid for 10 minutes.`,
+                    body: `Your GigConnect verification code is: ${generatedOtp}. Valid for 10 minutes.`,
                     from: process.env.TWILIO_FROM_NUMBER,
                     to: formattedPhone,
                 });
                 if (message.sid) {
-                    console.log(`✓ Real SMS sent via Twilio to ${formattedPhone} (SID: ${message.sid})`);
-                    return { status: "pending", demoCode: generatedOtp, isDeliveredViaTwilio: true };
+                    return { status: "pending", isDeliveredViaTwilio: true };
                 }
             } catch (smsErr) {
-                console.warn(`[Twilio SMS Notice] Could not deliver to ${formattedPhone}: ${smsErr.message}`);
+                console.warn(`[Twilio SMS Error] Could not deliver SMS to ${formattedPhone}: ${smsErr.message}`);
             }
         }
     }
 
-    return { status: "pending", demoCode: generatedOtp, isDeliveredViaTwilio: false };
+    return { status: "pending", isDeliveredViaTwilio: isDeliveredViaTwilio };
 };
 
 export const checkPhoneVerification = async (phone, code) => {
     const rawDigits = normalizePhone(phone);
     const formattedPhone = `+91${rawDigits}`;
 
-    // 1. Universal demo/presentation sandbox bypass
-    if (code === "123456") {
-        return { status: "approved" };
-    }
-
-    // 2. Check stored in-memory OTP for raw digits or formatted phone
+    // 1. Check stored in-memory OTP for raw digits or formatted phone
     const stored = memoryOtps.get(rawDigits) || memoryOtps.get(formattedPhone) || memoryOtps.get(phone);
     if (stored && stored.code === code && Date.now() < stored.expiresAt) {
         memoryOtps.delete(rawDigits);

@@ -246,6 +246,13 @@ export default function Messages({ initialWorker, onNavigate }) {
   const [bidPrice, setBidPrice] = useState(200);
   const [bidNote, setBidNote] = useState("");
 
+  // ================= GEMINI AI SMART REPLIES STATE =================
+  const [smartReplies, setSmartReplies] = useState([
+    "I am 5 mins away",
+    "Just reached your location",
+    "Stuck in traffic, reaching shortly",
+  ]);
+
   const socketRef = useRef(null);
   const messagesEndRef = useRef(null);
 
@@ -335,6 +342,13 @@ export default function Messages({ initialWorker, onNavigate }) {
             : c
         )
       );
+    });
+
+    // Listen for Gemini AI Smart Replies
+    socket.on("smart_replies", (data) => {
+      if (data?.replies && Array.isArray(data.replies) && data.replies.length) {
+        setSmartReplies(data.replies);
+      }
     });
 
     // Typing indicators — read activeChatId via the ref set in the effect below
@@ -1018,6 +1032,26 @@ export default function Messages({ initialWorker, onNavigate }) {
                 <span>Send Bid Card</span>
               </button>
             </form>
+          </div>
+        )}
+
+        {/* ================= FEATURE 4: GEMINI AI CONTEXTUAL SMART REPLIES ================= */}
+        {smartReplies && smartReplies.length > 0 && (
+          <div className="px-4 py-2 bg-slate-50/90 border-t border-slate-200 flex items-center gap-2 overflow-x-auto no-scrollbar flex-shrink-0">
+            <div className="flex items-center gap-1 text-[11px] font-bold text-[#0A2540] shrink-0">
+              <span className="material-symbols-outlined text-[15px] text-indigo-600">auto_awesome</span>
+              <span>Gemini AI:</span>
+            </div>
+            {smartReplies.map((reply, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => handleSendMessage(reply)}
+                className="px-3 py-1 bg-white hover:bg-indigo-50 hover:text-indigo-900 text-slate-700 border border-slate-200 hover:border-indigo-300 rounded-full text-xs font-semibold whitespace-nowrap shadow-2xs transition-all cursor-pointer flex-shrink-0 active:scale-95"
+              >
+                {reply}
+              </button>
+            ))}
           </div>
         )}
 

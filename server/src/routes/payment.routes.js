@@ -35,4 +35,8 @@ router.post("/verify/addon", verifyAddOnPayment);
 router.post("/bookings/:id/complete", completeBookingHandler);
 router.post("/release-payout/:id", completeBookingHandler);
 
+// Worker Wallet Endpoints (Part 2 & Part 3)
+router.get("/wallet", getWorkerWallet);
+router.post("/withdraw", withdrawWalletBalance);
+
 export default router;

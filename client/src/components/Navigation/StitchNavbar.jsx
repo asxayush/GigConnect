@@ -88,10 +88,23 @@ export default function StitchNavbar({
             >
               <span className="material-symbols-outlined text-[18px]">construction</span>
               <span>Tool Bank</span>
-              <span className="px-1.5 py-0.5 bg-orange-100 text-[#ea580c] text-[10px] font-extrabold rounded-md ml-0.5">
-                0% Fee
-              </span>
             </button>
+
+            {/* 4. Role Dashboard */}
+            {user && (
+              <button
+                type="button"
+                onClick={() => onNavigate(user.role === "worker" ? "worker-dashboard" : "customer-dashboard")}
+                className={`px-4 py-2 rounded-xl text-xs sm:text-sm font-extrabold transition-all border-none cursor-pointer flex items-center gap-1.5 ${
+                  view === "worker-dashboard" || view === "customer-dashboard" || view === "dashboard"
+                    ? "bg-[#0A2540] text-white shadow-xs"
+                    : "text-slate-600 hover:text-[#0A2540] hover:bg-slate-100 bg-transparent"
+                }`}
+              >
+                <span className="material-symbols-outlined text-[18px]">space_dashboard</span>
+                <span>Dashboard</span>
+              </button>
+            )}
           </nav>
 
           {/* ================= RIGHT: AUTH STATE (Join Button vs Avatar Only) ================= */}
