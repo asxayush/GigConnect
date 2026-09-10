@@ -17,7 +17,9 @@ export default function LiveSosQueue() {
           setAlerts(data.data);
         }
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error("SOS feed fetch failed:", err);
+      })
       .finally(() => setIsLoading(false));
   };
 
